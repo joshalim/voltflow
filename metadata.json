@@ -1,0 +1,5 @@
+{
+  "name": "VoltFlow EV Transaction Manager",
+  "description": "A comprehensive EV charging transaction management system featuring Excel/CSV import, real-time analytics, and AI-driven infrastructure insights.",
+  "requestFramePermissions": []
+}
