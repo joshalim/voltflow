@@ -1,8 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { EVTransaction, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText } from 'lucide-react';
+import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText, ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
 
 interface AccountReportsProps {
   transactions: EVTransaction[];
@@ -18,6 +18,7 @@ interface AccountSummary {
 }
 
 const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) => {
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
   const accountData = useMemo(() => {
@@ -45,9 +46,123 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
     })).sort((a, b) => b.cost - a.cost);
   }, [transactions]);
 
+  const accountSessions = useMemo(() => {
+    if (!selectedAccount) return [];
+    return transactions
+      .filter(tx => tx.account === selectedAccount)
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+  }, [transactions, selectedAccount]);
+
+  const selectedSummary = useMemo(() => {
+    return accountData.find(s => s.account === selectedAccount);
+  }, [accountData, selectedAccount]);
+
   const handleExportPDF = () => {
     window.print();
   };
+
+  const formatDuration = (mins: number) => {
+    if (!mins || mins < 0) return '0m';
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+  };
+
+  if (selectedAccount && selectedSummary) {
+    return (
+      <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSelectedAccount(null)}
+              className="no-print p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                <User className="text-orange-500" size={28} />
+                {selectedAccount}
+              </h2>
+              <p className="text-slate-500 font-medium">Detailed session history and billing for this account.</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleExportPDF}
+            className="no-print flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
+          >
+            <FileText size={18} />
+            Print User Statement
+          </button>
+        </header>
+
+        {/* User Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <DetailStatCard label="Total Sessions" value={selectedSummary.sessions} icon={<ListOrdered size={20} />} color="blue" />
+          <DetailStatCard label="Energy Consumed" value={`${selectedSummary.energy.toLocaleString()} kWh`} icon={<Zap size={20} />} color="orange" />
+          <DetailStatCard label="Total Amount" value={`$${selectedSummary.cost.toLocaleString()} COP`} icon={<DollarSign size={20} />} color="emerald" />
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print-border-none">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                  <th className="px-6 py-4">Date & Time</th>
+                  <th className="px-6 py-4">Station / Connector</th>
+                  <th className="px-6 py-4">Duration</th>
+                  <th className="px-6 py-4">Usage</th>
+                  <th className="px-6 py-4">Rate</th>
+                  <th className="px-6 py-4 text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {accountSessions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 text-sm">
+                          {new Date(tx.startTime).toLocaleDateString()}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {new Date(tx.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-slate-300" />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-700 text-xs">{tx.station}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{tx.connector}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-500 text-xs">
+                        <Clock size={12} className="text-slate-300" />
+                        {formatDuration(tx.durationMinutes)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="font-bold text-slate-700 text-sm">{tx.meterKWh.toFixed(1)} kWh</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] font-bold text-slate-400">${tx.appliedRate.toLocaleString()}/kWh</span>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <span className="font-black text-slate-900">${tx.costCOP.toLocaleString()}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -80,13 +195,17 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
             </thead>
             <tbody className="divide-y divide-slate-100">
               {accountData.map((s) => (
-                <tr key={s.account} className="hover:bg-slate-50/50 transition-colors group">
+                <tr 
+                  key={s.account} 
+                  onClick={() => setSelectedAccount(s.account)}
+                  className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                >
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-3">
                       <div className="bg-orange-100 p-2 rounded-xl text-orange-600 print-bg-none">
                         <User size={18} />
                       </div>
-                      <span className="font-black text-slate-800">{s.account}</span>
+                      <span className="font-black text-slate-800 group-hover:text-orange-600 transition-colors">{s.account}</span>
                     </div>
                   </td>
                   <td className="px-6 py-6 font-bold text-slate-500">
@@ -134,7 +253,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
       {/* Account Distribution Visual Summary (Mini Cards) */}
       <div className="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accountData.slice(0, 3).map((s, idx) => (
-          <div key={idx} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-between">
+          <div key={idx} onClick={() => setSelectedAccount(s.account)} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-between cursor-pointer hover:border-orange-200 transition-all">
             <div className="flex justify-between items-start mb-4">
               <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-100 px-2 py-1 rounded-md">Top Account #{idx+1}</span>
               <User size={16} className="text-slate-300" />
@@ -158,5 +277,21 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
     </div>
   );
 };
+
+const DetailStatCard = ({ label, value, icon, color }: any) => (
+  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+    <div className={`p-3 rounded-2xl ${
+      color === 'blue' ? 'bg-blue-50 text-blue-500' :
+      color === 'orange' ? 'bg-orange-50 text-orange-500' :
+      'bg-emerald-50 text-emerald-500'
+    }`}>
+      {icon}
+    </div>
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+      <p className="text-lg font-black text-slate-900">{value}</p>
+    </div>
+  </div>
+);
 
 export default AccountReports;

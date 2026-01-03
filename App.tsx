@@ -71,6 +71,8 @@ const App: React.FC = () => {
     return Array.from(accounts).sort();
   }, [transactions]);
 
+  const existingTxIds = useMemo(() => new Set(transactions.map(tx => tx.id)), [transactions]);
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
       const date = new Date(tx.startTime);
@@ -104,6 +106,10 @@ const App: React.FC = () => {
 
   const handleAddExpense = (exp: Omit<Expense, 'id'>) => {
     setExpenses(prev => [...prev, { ...exp, id: Date.now().toString() }]);
+  };
+
+  const handleUpdateExpense = (id: string, updates: Partial<Expense>) => {
+    setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, ...updates } : exp));
   };
 
   const handleDeleteExpense = (id: string) => {
@@ -221,7 +227,7 @@ const App: React.FC = () => {
             />
           )}
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
-          {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onDelete={handleDeleteExpense} lang={lang} />}
+          {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'pricing' && (
             <PricingSettings 
@@ -247,6 +253,7 @@ const App: React.FC = () => {
           onClose={() => setIsImportModalOpen(false)} 
           pricingRules={pricingRules} 
           accountGroups={accountGroups}
+          existingTxIds={existingTxIds}
           onImport={(data) => { 
             setTransactions([...data, ...transactions]); 
             setIsImportModalOpen(false); 
