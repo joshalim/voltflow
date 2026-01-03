@@ -85,6 +85,7 @@ export const TRANSLATIONS: Translations = {
   pricingRulesSubtitle: { en: 'Manage Account Groups and fine-tune pricing hierarchies.', es: 'Gestione grupos de cuentas y refine las jerarquías de precios.' },
   expensesSubtitle: { en: 'Track operational costs and infrastructure maintenance.', es: 'Rastree costos operativos y mantenimiento de infraestructura.' },
   searchAccountPlaceholder: { en: 'Search Account or ID...', es: 'Buscar Cuenta o ID...' },
+  selected: { en: 'Selected', es: 'Seleccionados' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

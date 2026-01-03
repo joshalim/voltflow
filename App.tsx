@@ -115,9 +115,19 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   };
 
+  const handleBulkUpdateTransactions = (ids: string[], updates: Partial<EVTransaction>) => {
+    setTransactions(prev => prev.map(tx => ids.includes(tx.id) ? { ...tx, ...updates } : tx));
+  };
+
   const handleDeleteTransaction = (id: string) => {
     if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
       setTransactions(prev => prev.filter(tx => tx.id !== id));
+    }
+  };
+
+  const handleBulkDeleteTransactions = (ids: string[]) => {
+    if (confirm(`Are you sure you want to delete ${ids.length} selected transactions? This action cannot be undone.`)) {
+      setTransactions(prev => prev.filter(tx => !ids.includes(tx.id)));
     }
   };
 
@@ -131,7 +141,6 @@ const App: React.FC = () => {
 
   const handleDeleteExpense = (id: string) => {
     if (confirm('Delete this expense?')) {
-      // Fixed: changed 'i' to 'e.id' to correctly filter by ID
       setExpenses(prev => prev.filter(e => e.id !== id));
     }
   };
@@ -253,6 +262,8 @@ const App: React.FC = () => {
               onClear={() => { if(confirm('Are you sure you want to clear all transactions?')) setTransactions([]); }} 
               onUpdate={handleUpdateTransaction}
               onDelete={handleDeleteTransaction}
+              onBulkUpdate={handleBulkUpdateTransactions}
+              onBulkDelete={handleBulkDeleteTransactions}
             />
           )}
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
@@ -287,7 +298,6 @@ const App: React.FC = () => {
             setTransactions([...data, ...transactions]); 
             setIsImportModalOpen(false); 
           }} 
-          // Fixed: added missing lang prop
           lang={lang}
         />
       )}
