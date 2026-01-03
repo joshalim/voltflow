@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { EVTransaction, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { User, Zap, DollarSign, ListOrdered, ChevronRight } from 'lucide-react';
+import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText } from 'lucide-react';
 
 interface AccountReportsProps {
   transactions: EVTransaction[];
@@ -45,14 +45,27 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
     })).sort((a, b) => b.cost - a.cost);
   }, [transactions]);
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header>
-        <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('accountOverview')}</h2>
-        <p className="text-slate-500 font-medium">Aggregated billing and usage statistics by user account.</p>
+      <header className="flex justify-between items-end">
+        <div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('accountOverview')}</h2>
+          <p className="text-slate-500 font-medium">Aggregated billing and usage statistics by user account.</p>
+        </div>
+        <button 
+          onClick={handleExportPDF}
+          className="no-print flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
+        >
+          <FileText size={18} />
+          Export PDF
+        </button>
       </header>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print-border-none">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -62,7 +75,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                 <th className="px-6 py-4">{t('totalEnergy')}</th>
                 <th className="px-6 py-4">{t('totalRevenue')}</th>
                 <th className="px-6 py-4">{t('rate')} (Avg)</th>
-                <th className="px-6 py-4 text-right"></th>
+                <th className="no-print px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -70,7 +83,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                 <tr key={s.account} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-6">
                     <div className="flex items-center gap-3">
-                      <div className="bg-orange-100 p-2 rounded-xl text-orange-600">
+                      <div className="bg-orange-100 p-2 rounded-xl text-orange-600 print-bg-none">
                         <User size={18} />
                       </div>
                       <span className="font-black text-slate-800">{s.account}</span>
@@ -101,7 +114,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                       ${Math.round(s.avgRate).toLocaleString()} / kWh
                     </span>
                   </td>
-                  <td className="px-6 py-6 text-right">
+                  <td className="no-print px-6 py-6 text-right">
                     <ChevronRight size={18} className="text-slate-200 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" />
                   </td>
                 </tr>
@@ -119,7 +132,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
       </div>
 
       {/* Account Distribution Visual Summary (Mini Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accountData.slice(0, 3).map((s, idx) => (
           <div key={idx} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">

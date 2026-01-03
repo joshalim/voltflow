@@ -77,6 +77,12 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   };
 
+  const handleDeleteTransaction = (id: string) => {
+    if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+      setTransactions(prev => prev.filter(tx => tx.id !== id));
+    }
+  };
+
   const handleUpdatePricingRule = (id: string, updates: Partial<PricingRule>) => {
     setPricingRules(prev => prev.map(rule => rule.id === id ? { ...rule, ...updates } : rule));
   };
@@ -91,7 +97,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-30 shadow-sm">
+      <aside className="no-print hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-30 shadow-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="bg-orange-500 p-2 rounded-lg shadow-lg shadow-orange-200">
             <Zap className="text-white w-5 h-5" />
@@ -129,12 +135,12 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 print-p-0">
         <div className="max-w-6xl mx-auto space-y-8">
           
           {/* Global Filter Bar */}
           {(['dashboard', 'transactions', 'reports'].includes(activeTab)) && (
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 animate-in slide-in-from-top-4 duration-300">
+            <div className="no-print bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 animate-in slide-in-from-top-4 duration-300">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-slate-800 font-bold">
                   <Filter size={18} className="text-orange-600" />
@@ -175,8 +181,9 @@ const App: React.FC = () => {
             <TransactionTable 
               transactions={filteredTransactions} 
               lang={lang} 
-              onClear={() => { if(confirm('Are you sure?')) setTransactions([]); }} 
-              onUpdate={handleUpdateTransaction} 
+              onClear={() => { if(confirm('Are you sure you want to clear all transactions?')) setTransactions([]); }} 
+              onUpdate={handleUpdateTransaction}
+              onDelete={handleDeleteTransaction}
             />
           )}
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}

@@ -1,17 +1,18 @@
 
 import React, { useState, useMemo } from 'react';
 import { EVTransaction, Language, TransactionStatus, PaymentMethod } from '../types';
-import { Search, Download, Edit3, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock } from 'lucide-react';
+import { Search, Download, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 
 interface TransactionTableProps {
   transactions: EVTransaction[];
   onClear: () => void;
   onUpdate: (id: string, updates: Partial<EVTransaction>) => void;
+  onDelete: (id: string) => void;
   lang: Language;
 }
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onClear, onUpdate, lang }) => {
+const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onClear, onUpdate, onDelete, lang }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTx, setEditingTx] = useState<EVTransaction | null>(null);
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
@@ -120,13 +121,22 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
                     ${tx.costCOP.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => setEditingTx(tx)} 
-                      className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                      title="Edit Transaction"
-                    >
-                      <Edit3 size={18} />
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <button 
+                        onClick={() => setEditingTx(tx)} 
+                        className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
+                        title="Edit Transaction"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => onDelete(tx.id)} 
+                        className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete Transaction"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
