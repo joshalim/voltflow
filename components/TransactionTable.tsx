@@ -2,9 +2,10 @@
 import React, { useState, useMemo } from 'react';
 import { EVTransaction, Language, TransactionStatus, PaymentMethod } from '../types';
 // Added missing X icon to the imports from lucide-react
-import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, Calendar, ChevronDown, CheckSquare, Square, Layers, X } from 'lucide-react';
+import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, Calendar, ChevronDown, CheckSquare, Square, Layers, X, FileText } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import ConnectorIcon from './ConnectorIcon';
+import InvoiceModal from './InvoiceModal';
 
 interface TransactionTableProps {
   transactions: EVTransaction[];
@@ -28,6 +29,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingTx, setEditingTx] = useState<EVTransaction | null>(null);
+  const [invoiceTx, setInvoiceTx] = useState<EVTransaction | null>(null);
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   
   // Bulk Edit Form State
@@ -134,7 +136,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 <th className="px-6 py-4">{t('startTime')}</th>
                 <th className="px-6 py-4">{t('station')} / {t('connector')}</th>
                 <th className="px-6 py-4">{t('usage')} & {t('rate')}</th>
-                <th className="px-6 py-4">{t('duration')}</th>
+                <th className="px-6 py-4">{t('cost')}</th>
                 <th className="px-6 py-4">{t('status')}</th>
                 <th className="px-6 py-4">{t('paymentType')}</th>
                 <th className="px-6 py-4 text-right"></th>
@@ -180,8 +182,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                       <p className="text-[10px] text-slate-400">${tx.appliedRate.toLocaleString()}/kWh</p>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-600">
-                        <Clock size={14} className="text-orange-400" />
+                      <p className="font-black text-slate-900">${tx.costCOP.toLocaleString()}</p>
+                      <div className="flex items-center gap-1.5 font-bold text-slate-400 text-[10px]">
+                        <Clock size={12} className="text-orange-400" />
                         {formatDuration(tx.durationMinutes)}
                       </div>
                     </td>
@@ -204,6 +207,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1">
+                        <button 
+                          onClick={() => setInvoiceTx(tx)} 
+                          className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title={t('invoice')}
+                        >
+                          <FileText size={18} />
+                        </button>
                         <button 
                           onClick={() => setEditingTx(tx)} 
                           className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
@@ -406,6 +416,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Invoice Modal */}
+      {invoiceTx && (
+        <InvoiceModal 
+          transaction={invoiceTx} 
+          lang={lang} 
+          onClose={() => setInvoiceTx(null)} 
+        />
       )}
     </div>
   );

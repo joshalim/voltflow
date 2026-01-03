@@ -86,6 +86,11 @@ export const TRANSLATIONS: Translations = {
   expensesSubtitle: { en: 'Track operational costs and infrastructure maintenance.', es: 'Rastree costos operativos y mantenimiento de infraestructura.' },
   searchAccountPlaceholder: { en: 'Search Account or ID...', es: 'Buscar Cuenta o ID...' },
   selected: { en: 'Selected', es: 'Seleccionados' },
+  invoice: { en: 'Invoice', es: 'Factura' },
+  printInvoice: { en: 'Print Invoice', es: 'Imprimir Factura' },
+  billTo: { en: 'Bill To', es: 'Facturar a' },
+  description: { en: 'Description', es: 'Descripción' },
+  total: { en: 'Total', es: 'Total' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];
