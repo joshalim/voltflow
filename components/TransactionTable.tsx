@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { EVTransaction, Language, TransactionStatus, PaymentMethod } from '../types';
-// Added missing X icon to the imports from lucide-react
-import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, Calendar, ChevronDown, CheckSquare, Square, Layers, X, FileText } from 'lucide-react';
+import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, CheckSquare, Square, Layers, X, FileText } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import ConnectorIcon from './ConnectorIcon';
 import InvoiceModal from './InvoiceModal';
@@ -16,6 +15,10 @@ interface TransactionTableProps {
   onBulkDelete: (ids: string[]) => void;
   lang: Language;
 }
+
+// Global formatters
+const formatCOP = (num: number) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
+const formatKWh = (num: number) => num.toFixed(2);
 
 const TransactionTable: React.FC<TransactionTableProps> = ({ 
   transactions, 
@@ -32,7 +35,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   const [invoiceTx, setInvoiceTx] = useState<EVTransaction | null>(null);
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   
-  // Bulk Edit Form State
   const [bulkStatus, setBulkStatus] = useState<TransactionStatus>('PAID');
   const [bulkPaymentType, setBulkPaymentType] = useState<PaymentMethod>('N/A');
   const [bulkPaymentDate, setBulkPaymentDate] = useState<string>('');
@@ -178,11 +180,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-bold text-slate-700">{tx.meterKWh.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">kWh</span></p>
-                      <p className="text-[10px] text-slate-400">${tx.appliedRate.toLocaleString()}/kWh</p>
+                      <p className="font-bold text-slate-700">{formatKWh(tx.meterKWh)} <span className="text-[10px] text-slate-400 font-normal">kWh</span></p>
+                      <p className="text-[10px] text-slate-400">${formatCOP(tx.appliedRate)}/kWh</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-black text-slate-900">${tx.costCOP.toLocaleString()}</p>
+                      <p className="font-black text-slate-900">${formatCOP(tx.costCOP)}</p>
                       <div className="flex items-center gap-1.5 font-bold text-slate-400 text-[10px]">
                         <Clock size={12} className="text-orange-400" />
                         {formatDuration(tx.durationMinutes)}
@@ -245,7 +247,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       </div>
 
-      {/* Bulk Actions Floating Toolbar */}
       {selectedIds.size > 0 && (
         <div className="no-print fixed bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 duration-300">
           <div className="bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 border border-slate-700/50 backdrop-blur-xl">
@@ -283,7 +284,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {/* Bulk Edit Modal */}
       {isBulkEditing && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
@@ -354,7 +354,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {/* Individual Edit Modal (Existing) */}
       {editingTx && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
@@ -418,7 +417,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {/* Invoice Modal */}
       {invoiceTx && (
         <InvoiceModal 
           transaction={invoiceTx} 

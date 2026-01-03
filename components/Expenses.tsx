@@ -12,6 +12,11 @@ interface ExpensesProps {
   lang: Language;
 }
 
+// Formatter to use dot as thousands separator and 0 decimals
+const formatCOP = (num: number) => {
+  return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
+};
+
 const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete, lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
@@ -78,7 +83,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                 </label>
                 <input 
                   type="number" value={amount} onChange={e => setAmount(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0"
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -123,7 +128,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                         <span className="font-bold text-slate-800">{exp.description}</span>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="font-black text-rose-600">-${exp.amount.toLocaleString()} COP</span>
+                        <span className="font-black text-rose-600">-${formatCOP(exp.amount)} COP</span>
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1">

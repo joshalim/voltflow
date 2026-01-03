@@ -1,30 +1,32 @@
 
 import React, { useState } from 'react';
-import { PricingRule, AccountGroup, Language } from '../types';
+import { PricingRule, AccountGroup, Language, ApiConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Plus, Trash2, Info, Edit3, Check, X, Users, User, LayoutGrid, Target } from 'lucide-react';
+import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck } from 'lucide-react';
 
 interface PricingSettingsProps {
   rules: PricingRule[];
   groups: AccountGroup[];
+  apiConfig: ApiConfig;
   onAddRule: (rule: Omit<PricingRule, 'id'>) => void;
   onUpdateRule: (id: string, rule: Partial<PricingRule>) => void;
   onDeleteRule: (id: string) => void;
   onAddGroup: (group: Omit<AccountGroup, 'id'>) => void;
   onUpdateGroup: (id: string, updates: Partial<AccountGroup>) => void;
   onDeleteGroup: (id: string) => void;
+  onUpdateApiConfig: (config: Partial<ApiConfig>) => void;
   lang: Language;
 }
 
 const PricingSettings: React.FC<PricingSettingsProps> = ({ 
   rules, 
   groups, 
+  apiConfig,
   onAddRule, 
-  onUpdateRule, 
   onDeleteRule, 
   onAddGroup,
-  onUpdateGroup,
   onDeleteGroup,
+  onUpdateApiConfig,
   lang 
 }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
@@ -72,7 +74,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Users size={20} className="text-orange-500" />
@@ -82,7 +84,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             <form onSubmit={handleAddGroup} className="space-y-4 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('account')} {t('year')}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('account')}</label>
                   <input 
                     type="text" value={groupName} onChange={e => setGroupName(e.target.value)}
                     placeholder="e.g. VIP Fleet"
@@ -123,6 +125,56 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* API Integration Section */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+              <Globe size={20} className="text-blue-500" />
+              {t('apiIntegration')}
+            </h3>
+
+            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                   <ShieldCheck className={apiConfig.isEnabled ? 'text-emerald-500' : 'text-slate-300'} size={18} />
+                   <span className="text-sm font-bold text-slate-700">{t('enableIntegration')}</span>
+                 </div>
+                 <button 
+                  onClick={() => onUpdateApiConfig({ isEnabled: !apiConfig.isEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${apiConfig.isEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                 >
+                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${apiConfig.isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                 </button>
+               </div>
+
+               <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Link2 size={10} /> {t('apiUrl')}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={apiConfig.invoiceApiUrl} 
+                      onChange={e => onUpdateApiConfig({ invoiceApiUrl: e.target.value })}
+                      placeholder="https://api.3rdparty.com/v1/invoices"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Key size={10} /> {t('apiKey')}
+                    </label>
+                    <input 
+                      type="password" 
+                      value={apiConfig.invoiceApiKey} 
+                      onChange={e => onUpdateApiConfig({ invoiceApiKey: e.target.value })}
+                      placeholder="••••••••••••••••"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+               </div>
             </div>
           </div>
         </div>
@@ -213,7 +265,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                       <td className="py-3 px-2">
                         <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-slate-600">{rule.connector}</span>
                       </td>
-                      <td className="py-3 px-2 font-black text-orange-600 text-xs">${rule.ratePerKWh.toLocaleString()}</td>
+                      <td className="py-3 px-2 font-black text-orange-600 text-xs">${new Intl.NumberFormat('de-DE').format(rule.ratePerKWh)}</td>
                       <td className="py-3 px-2 text-right">
                         <button onClick={() => onDeleteRule(rule.id)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                       </td>

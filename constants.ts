@@ -91,6 +91,11 @@ export const TRANSLATIONS: Translations = {
   billTo: { en: 'Bill To', es: 'Facturar a' },
   description: { en: 'Description', es: 'Descripción' },
   total: { en: 'Total', es: 'Total' },
+  apiIntegration: { en: 'API Integration', es: 'Integración API' },
+  apiUrl: { en: '3rd Party API URL', es: 'URL de API de Terceros' },
+  apiKey: { en: 'API Key', es: 'Clave de API' },
+  enableIntegration: { en: 'Enable Integration', es: 'Activar Integración' },
+  saveConfig: { en: 'Save Configuration', es: 'Guardar Configuración' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers } from 'lucide-react';
-import { MOCK_DATA, TRANSLATIONS, INITIAL_PRICING_RULES } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense } from './types';
+import { TRANSLATIONS } from './constants';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -30,6 +30,11 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     const saved = localStorage.getItem('smartcharge_expenses');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(() => {
+    const saved = localStorage.getItem('smartcharge_api');
+    return saved ? JSON.parse(saved) : { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false };
   });
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses'>('dashboard');
@@ -59,6 +64,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('smartcharge_expenses', JSON.stringify(expenses));
   }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('smartcharge_api', JSON.stringify(apiConfig));
+  }, [apiConfig]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -273,6 +282,7 @@ const App: React.FC = () => {
             <PricingSettings 
               rules={pricingRules} 
               groups={accountGroups}
+              apiConfig={apiConfig}
               onAddRule={(r) => setPricingRules([...pricingRules, { ...r, id: Date.now().toString() }])} 
               onUpdateRule={handleUpdatePricingRule}
               onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} 
@@ -282,6 +292,7 @@ const App: React.FC = () => {
                 setPricingRules(pricingRules.filter(r => r.targetId !== id || r.targetType !== 'GROUP'));
               }}
               onUpdateGroup={(id, updates) => setAccountGroups(accountGroups.map(g => g.id === id ? { ...g, ...updates } : g))}
+              onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
               lang={lang} 
             />
           )}

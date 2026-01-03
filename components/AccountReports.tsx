@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { EVTransaction, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText, ArrowLeft, Clock, MapPin, CalendarDays } from 'lucide-react';
+import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText, ArrowLeft, Clock, CalendarDays } from 'lucide-react';
 import ConnectorIcon from './ConnectorIcon';
 
 interface AccountReportsProps {
@@ -33,6 +33,10 @@ const MONTHS = [
   { id: '10', en: 'November', es: 'Noviembre' },
   { id: '11', en: 'December', es: 'Diciembre' },
 ];
+
+// Global formatters
+const formatCOP = (num: number) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
+const formatKWh = (num: number) => num.toFixed(2);
 
 const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) => {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
@@ -122,8 +126,8 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <DetailStatCard label={t('totalSessions')} value={selectedSummary.sessions} icon={<ListOrdered size={20} />} color="blue" />
-          <DetailStatCard label={t('totalEnergy')} value={`${selectedSummary.energy.toLocaleString()} kWh`} icon={<Zap size={20} />} color="orange" />
-          <DetailStatCard label={t('totalRevenue')} value={`$${selectedSummary.cost.toLocaleString()} COP`} icon={<DollarSign size={20} />} color="emerald" />
+          <DetailStatCard label={t('totalEnergy')} value={`${formatKWh(selectedSummary.energy)} kWh`} icon={<Zap size={20} />} color="orange" />
+          <DetailStatCard label={t('totalRevenue')} value={`$${formatCOP(selectedSummary.cost)} COP`} icon={<DollarSign size={20} />} color="emerald" />
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print-border-none">
@@ -168,13 +172,13 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="font-bold text-slate-700 text-sm">{tx.meterKWh.toFixed(1)} kWh</span>
+                      <span className="font-bold text-slate-700 text-sm">{formatKWh(tx.meterKWh)} kWh</span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-[10px] font-bold text-slate-400">${tx.appliedRate.toLocaleString()}/kWh</span>
+                      <span className="text-[10px] font-bold text-slate-400">${formatCOP(tx.appliedRate)}/kWh</span>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <span className="font-black text-slate-900">${tx.costCOP.toLocaleString()}</span>
+                      <span className="font-black text-slate-900">${formatCOP(tx.costCOP)}</span>
                     </td>
                   </tr>
                 ))}
@@ -247,13 +251,13 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                     {s.sessions}
                   </td>
                   <td className="px-6 py-6 font-bold text-slate-700">
-                    {s.energy.toLocaleString()} kWh
+                    {formatKWh(s.energy)} kWh
                   </td>
                   <td className="px-6 py-6 font-black text-slate-900">
-                    ${s.cost.toLocaleString()} COP
+                    ${formatCOP(s.cost)} COP
                   </td>
                   <td className="px-6 py-6 text-xs font-bold text-slate-400">
-                    ${Math.round(s.avgRate).toLocaleString()} / kWh
+                    ${formatCOP(Math.round(s.avgRate))} / kWh
                   </td>
                   <td className="no-print px-6 py-6 text-right">
                     <ChevronRight size={18} className="text-slate-200 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" />

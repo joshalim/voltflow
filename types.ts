@@ -39,6 +39,12 @@ export interface PricingRule {
   ratePerKWh: number;
 }
 
+export interface ApiConfig {
+  invoiceApiUrl: string;
+  invoiceApiKey: string;
+  isEnabled: boolean;
+}
+
 export type Language = 'en' | 'es';
 
 export interface Translations {

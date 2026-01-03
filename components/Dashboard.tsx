@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { EVTransaction, Language, Expense } from '../types';
-import { Zap, DollarSign, Clock, Users, ShieldCheck, ShieldAlert, ReceiptText, TrendingUp } from 'lucide-react';
+import { Zap, DollarSign, TrendingUp, ShieldCheck, ReceiptText } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 
 interface DashboardProps {
@@ -12,6 +12,16 @@ interface DashboardProps {
 }
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#6366f1', '#f43f5e'];
+
+// Formatter to use dot as thousands separator and 0 decimals
+const formatCOP = (num: number) => {
+  return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
+};
+
+// Formatter for energy to use 2 decimal places
+const formatKWh = (num: number) => {
+  return num.toFixed(2);
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
@@ -67,10 +77,10 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label={t('totalRevenue')} value={`$${financialStats.totalRevenue.toLocaleString()} COP`} icon={<DollarSign size={24} />} color="blue" />
-        <StatCard label={t('totalExpenses')} value={`$${financialStats.totalExpenses.toLocaleString()} COP`} icon={<ReceiptText size={24} />} color="rose" />
-        <StatCard label={t('netProfit')} value={`$${financialStats.netProfit.toLocaleString()} COP`} icon={<TrendingUp size={24} />} color="emerald" />
-        <StatCard label={t('totalPaid')} value={`$${financialStats.paid.toLocaleString()} COP`} icon={<ShieldCheck size={24} />} color="emerald" />
+        <StatCard label={t('totalRevenue')} value={`$${formatCOP(financialStats.totalRevenue)} COP`} icon={<DollarSign size={24} />} color="blue" />
+        <StatCard label={t('totalExpenses')} value={`$${formatCOP(financialStats.totalExpenses)} COP`} icon={<ReceiptText size={24} />} color="rose" />
+        <StatCard label={t('netProfit')} value={`$${formatCOP(financialStats.netProfit)} COP`} icon={<TrendingUp size={24} />} color="emerald" />
+        <StatCard label={t('totalPaid')} value={`$${formatCOP(financialStats.paid)} COP`} icon={<ShieldCheck size={24} />} color="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -81,8 +91,8 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
               <AreaChart data={timeSeriesData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip />
+                <YAxis fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => formatCOP(v)} />
+                <Tooltip formatter={(value: number) => [`$${formatCOP(value)}`, '']} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" name={t('totalRevenue')} stroke="#3b82f6" fill="#eff6ff" strokeWidth={3} />
                 <Area type="monotone" dataKey="expense" name={t('totalExpenses')} stroke="#f43f5e" fill="#fff1f2" strokeWidth={3} />
@@ -99,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
                 <Pie data={paymentBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80}>
                   {paymentBreakdown.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => [`$${formatCOP(value)}`, '']} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -114,7 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis fontSize={10} tickLine={false} axisLine={false} />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => [`${formatKWh(value)} kWh`, '']} />
               <Area type="monotone" dataKey="energy" name={t('totalEnergy')} stroke="#f97316" fill="#fff7ed" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>

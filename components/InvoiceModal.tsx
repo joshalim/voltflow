@@ -2,13 +2,17 @@
 import React from 'react';
 import { EVTransaction, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Printer, Zap, MapPin, Calendar, Clock, Download } from 'lucide-react';
+import { X, Printer, Zap, MapPin, Clock, Download } from 'lucide-react';
 
 interface InvoiceModalProps {
   transaction: EVTransaction;
   lang: Language;
   onClose: () => void;
 }
+
+// Global formatters
+const formatCOP = (num: number) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
+const formatKWh = (num: number) => num.toFixed(2);
 
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, lang, onClose }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
@@ -133,13 +137,13 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, lang, onClose 
                         <p className="text-xs text-slate-400 mt-1">Session ID: {transaction.id}</p>
                       </td>
                       <td className="py-6 px-2">
-                        <span className="font-bold text-slate-700">{transaction.meterKWh.toFixed(2)} kWh</span>
+                        <span className="font-bold text-slate-700">{formatKWh(transaction.meterKWh)} kWh</span>
                       </td>
                       <td className="py-6 px-2">
-                        <span className="text-slate-500 text-sm">${transaction.appliedRate.toLocaleString()} / kWh</span>
+                        <span className="text-slate-500 text-sm">${formatCOP(transaction.appliedRate)} / kWh</span>
                       </td>
                       <td className="py-6 px-2 text-right">
-                        <span className="font-black text-slate-900">${transaction.costCOP.toLocaleString()}</span>
+                        <span className="font-black text-slate-900">${formatCOP(transaction.costCOP)}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -152,7 +156,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, lang, onClose 
               <div className="w-full max-w-[200px] space-y-3">
                 <div className="flex justify-between items-center text-slate-500 text-sm">
                   <span>Subtotal</span>
-                  <span>${transaction.costCOP.toLocaleString()}</span>
+                  <span>${formatCOP(transaction.costCOP)}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-500 text-sm">
                   <span>Tax (0%)</span>
@@ -160,7 +164,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ transaction, lang, onClose 
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                   <span className="font-black text-slate-800">{t('total')}</span>
-                  <span className="text-2xl font-black text-orange-600">${transaction.costCOP.toLocaleString()} COP</span>
+                  <span className="text-2xl font-black text-orange-600">${formatCOP(transaction.costCOP)} COP</span>
                 </div>
               </div>
             </div>
