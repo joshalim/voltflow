@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2 } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -10,36 +10,22 @@ import AIInsights from './components/AIInsights';
 import PricingSettings from './components/PricingSettings';
 import AccountReports from './components/AccountReports';
 import Expenses from './components/Expenses';
+import { databaseService } from './services/databaseService';
 
 const App: React.FC = () => {
-  const [transactions, setTransactions] = useState<EVTransaction[]>(() => {
-    const saved = localStorage.getItem('smartcharge_transactions_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Initialize state from consolidated database
+  const initialDb = databaseService.load();
 
-  const [pricingRules, setPricingRules] = useState<PricingRule[]>(() => {
-    const saved = localStorage.getItem('smartcharge_pricing');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [accountGroups, setAccountGroups] = useState<AccountGroup[]>(() => {
-    const saved = localStorage.getItem('smartcharge_groups');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const saved = localStorage.getItem('smartcharge_expenses');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [apiConfig, setApiConfig] = useState<ApiConfig>(() => {
-    const saved = localStorage.getItem('smartcharge_api');
-    return saved ? JSON.parse(saved) : { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false };
-  });
+  const [transactions, setTransactions] = useState<EVTransaction[]>(initialDb.transactions);
+  const [pricingRules, setPricingRules] = useState<PricingRule[]>(initialDb.pricingRules);
+  const [accountGroups, setAccountGroups] = useState<AccountGroup[]>(initialDb.accountGroups);
+  const [expenses, setExpenses] = useState<Expense[]>(initialDb.expenses);
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(initialDb.apiConfig);
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses'>('dashboard');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -49,25 +35,19 @@ const App: React.FC = () => {
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
+  // Global Auto-Save Effect
   useEffect(() => {
-    localStorage.setItem('smartcharge_transactions_v2', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('smartcharge_pricing', JSON.stringify(pricingRules));
-  }, [pricingRules]);
-
-  useEffect(() => {
-    localStorage.setItem('smartcharge_groups', JSON.stringify(accountGroups));
-  }, [accountGroups]);
-
-  useEffect(() => {
-    localStorage.setItem('smartcharge_expenses', JSON.stringify(expenses));
-  }, [expenses]);
-
-  useEffect(() => {
-    localStorage.setItem('smartcharge_api', JSON.stringify(apiConfig));
-  }, [apiConfig]);
+    setIsSaving(true);
+    databaseService.save({
+      transactions,
+      pricingRules,
+      accountGroups,
+      expenses,
+      apiConfig
+    });
+    const timer = setTimeout(() => setIsSaving(false), 800);
+    return () => clearTimeout(timer);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -158,6 +138,20 @@ const App: React.FC = () => {
     setPricingRules(prev => prev.map(rule => rule.id === id ? { ...rule, ...updates } : rule));
   };
 
+  const handleImportBackup = async (file: File) => {
+    const restored = await databaseService.importBackup(file);
+    if (restored) {
+      setTransactions(restored.transactions);
+      setPricingRules(restored.pricingRules);
+      setAccountGroups(restored.accountGroups);
+      setExpenses(restored.expenses);
+      setApiConfig(restored.apiConfig);
+      alert('Database restored successfully.');
+    } else {
+      alert('Error restoring database. File might be corrupted.');
+    }
+  };
+
   const resetFilters = () => {
     setStartDate('');
     setEndDate('');
@@ -190,6 +184,19 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
+          <div className="flex items-center justify-between px-2 py-1">
+             <div className="flex items-center gap-2">
+                {isSaving ? (
+                  <Save size={14} className="text-slate-300 animate-pulse" />
+                ) : (
+                  <CheckCircle2 size={14} className="text-emerald-500" />
+                )}
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {isSaving ? 'Saving...' : 'All Saved'}
+                </span>
+             </div>
+          </div>
+
           <button 
             onClick={() => setIsImportModalOpen(true)} 
             className="flex items-center justify-center gap-2 w-full bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 transition shadow-lg shadow-orange-100"
@@ -293,6 +300,8 @@ const App: React.FC = () => {
               }}
               onUpdateGroup={(id, updates) => setAccountGroups(accountGroups.map(g => g.id === id ? { ...g, ...updates } : g))}
               onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
+              onExportBackup={() => databaseService.exportBackup()}
+              onImportBackup={handleImportBackup}
               lang={lang} 
             />
           )}
