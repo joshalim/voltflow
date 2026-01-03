@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { EVTransaction, Language, TransactionStatus, PaymentMethod } from '../types';
-import { Search, Download, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock } from 'lucide-react';
+import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
+import ConnectorIcon from './ConnectorIcon';
 
 interface TransactionTableProps {
   transactions: EVTransaction[];
@@ -75,11 +76,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
             <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-wider">
               <tr>
                 <th className="px-6 py-4">Account / ID</th>
+                <th className="px-6 py-4">Station / Type</th>
                 <th className="px-6 py-4">Usage & Rate</th>
                 <th className="px-6 py-4">Charge Time</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Payment</th>
-                <th className="px-6 py-4">Total</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
@@ -89,6 +90,17 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
                   <td className="px-6 py-4">
                     <p className="font-bold text-slate-800 group-hover:text-orange-600 transition-colors">{tx.account}</p>
                     <p className="text-[10px] text-slate-400 font-mono">{tx.id}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 group-hover:border-orange-200 transition-colors">
+                        <ConnectorIcon type={tx.connector} size={16} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-700 text-xs">{tx.station}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">{tx.connector}</span>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-bold text-slate-700">{tx.meterKWh.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">kWh</span></p>
@@ -116,9 +128,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
                         {tx.paymentDate && <p className="text-[10px] text-slate-400">{new Date(tx.paymentDate).toLocaleDateString()}</p>}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 font-black text-orange-600 text-base">
-                    ${tx.costCOP.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">

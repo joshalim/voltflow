@@ -2,7 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import { EVTransaction, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText, ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
+import { User, Zap, DollarSign, ListOrdered, ChevronRight, FileText, ArrowLeft, Clock, MapPin, CalendarDays } from 'lucide-react';
+import ConnectorIcon from './ConnectorIcon';
 
 interface AccountReportsProps {
   transactions: EVTransaction[];
@@ -17,14 +18,36 @@ interface AccountSummary {
   avgRate: number;
 }
 
+const MONTHS = [
+  { id: 'all', en: 'All Months', es: 'Todos los Meses' },
+  { id: '0', en: 'January', es: 'Enero' },
+  { id: '1', en: 'February', es: 'Febrero' },
+  { id: '2', en: 'March', es: 'Marzo' },
+  { id: '3', en: 'April', es: 'Abril' },
+  { id: '4', en: 'May', es: 'Mayo' },
+  { id: '5', en: 'June', es: 'Junio' },
+  { id: '6', en: 'July', es: 'Julio' },
+  { id: '7', en: 'August', es: 'Agosto' },
+  { id: '8', en: 'September', es: 'Septiembre' },
+  { id: '9', en: 'October', es: 'Octubre' },
+  { id: '10', en: 'November', es: 'Noviembre' },
+  { id: '11', en: 'December', es: 'Diciembre' },
+];
+
 const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) => {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState('all');
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+
+  const filteredByMonth = useMemo(() => {
+    if (selectedMonth === 'all') return transactions;
+    return transactions.filter(tx => new Date(tx.startTime).getMonth().toString() === selectedMonth);
+  }, [transactions, selectedMonth]);
 
   const accountData = useMemo(() => {
     const summary: Record<string, AccountSummary> = {};
     
-    transactions.forEach(tx => {
+    filteredByMonth.forEach(tx => {
       if (!summary[tx.account]) {
         summary[tx.account] = {
           account: tx.account,
@@ -44,14 +67,14 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
       ...s,
       avgRate: s.energy > 0 ? s.cost / s.energy : 0
     })).sort((a, b) => b.cost - a.cost);
-  }, [transactions]);
+  }, [filteredByMonth]);
 
   const accountSessions = useMemo(() => {
     if (!selectedAccount) return [];
-    return transactions
+    return filteredByMonth
       .filter(tx => tx.account === selectedAccount)
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-  }, [transactions, selectedAccount]);
+  }, [filteredByMonth, selectedAccount]);
 
   const selectedSummary = useMemo(() => {
     return accountData.find(s => s.account === selectedAccount);
@@ -132,7 +155,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2">
-                        <MapPin size={14} className="text-slate-300" />
+                        <ConnectorIcon type={tx.connector} size={14} />
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-700 text-xs">{tx.station}</span>
                           <span className="text-[10px] text-slate-400 font-bold uppercase">{tx.connector}</span>
@@ -166,18 +189,31 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col lg:flex-row lg:justify-between lg:items-end gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('accountOverview')}</h2>
           <p className="text-slate-500 font-medium">Aggregated billing and usage statistics by user account.</p>
         </div>
-        <button 
-          onClick={handleExportPDF}
-          className="no-print flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
-        >
-          <FileText size={18} />
-          Export PDF
-        </button>
+        
+        <div className="no-print flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
+            <CalendarDays size={18} className="text-orange-500" />
+            <select 
+              className="bg-transparent text-sm font-bold text-slate-700 outline-none"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              {MONTHS.map(m => <option key={m.id} value={m.id}>{lang === 'en' ? m.en : m.es}</option>)}
+            </select>
+          </div>
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
+          >
+            <FileText size={18} />
+            Export PDF
+          </button>
+        </div>
       </header>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print-border-none">
@@ -241,7 +277,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
               {accountData.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-20 text-center text-slate-400 italic font-medium">
-                    No account data available. Import sessions to see reports.
+                    No account data available for the selected period.
                   </td>
                 </tr>
               )}
@@ -267,7 +303,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                  <div 
                    className="bg-orange-500 h-full rounded-full" 
-                   style={{ width: `${(s.cost / accountData[0].cost) * 100}%` }}
+                   style={{ width: `${(s.cost / (accountData[0]?.cost || 1)) * 100}%` }}
                  />
                </div>
             </div>

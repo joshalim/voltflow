@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers } from 'lucide-react';
 import { MOCK_DATA, TRANSLATIONS, INITIAL_PRICING_RULES } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense } from './types';
 import Dashboard from './components/Dashboard';
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [selectedStation, setSelectedStation] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
@@ -71,6 +72,19 @@ const App: React.FC = () => {
     return Array.from(accounts).sort();
   }, [transactions]);
 
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    transactions.forEach(tx => {
+      const y = new Date(tx.startTime).getFullYear().toString();
+      years.add(y);
+    });
+    expenses.forEach(ex => {
+      const y = new Date(ex.date).getFullYear().toString();
+      years.add(y);
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [transactions, expenses]);
+
   const existingTxIds = useMemo(() => new Set(transactions.map(tx => tx.id)), [transactions]);
 
   const filteredTransactions = useMemo(() => {
@@ -81,18 +95,21 @@ const App: React.FC = () => {
       const matchesDate = (!start || date >= start) && (!end || date <= end);
       const matchesStation = selectedStation === 'all' || tx.station === selectedStation;
       const matchesAccount = accountFilter === 'all' || tx.account === accountFilter;
-      return matchesDate && matchesStation && matchesAccount;
+      const matchesYear = selectedYear === 'all' || date.getFullYear().toString() === selectedYear;
+      return matchesDate && matchesStation && matchesAccount && matchesYear;
     });
-  }, [transactions, startDate, endDate, selectedStation, accountFilter]);
+  }, [transactions, startDate, endDate, selectedStation, accountFilter, selectedYear]);
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(exp => {
       const date = new Date(exp.date);
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
-      return (!start || date >= start) && (!end || date <= end);
+      const matchesDate = (!start || date >= start) && (!end || date <= end);
+      const matchesYear = selectedYear === 'all' || date.getFullYear().toString() === selectedYear;
+      return matchesDate && matchesYear;
     });
-  }, [expenses, startDate, endDate]);
+  }, [expenses, startDate, endDate, selectedYear]);
 
   const handleUpdateTransaction = (id: string, updates: Partial<EVTransaction>) => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
@@ -127,6 +144,7 @@ const App: React.FC = () => {
     setEndDate('');
     setSelectedStation('all');
     setAccountFilter('all');
+    setSelectedYear('all');
   };
 
   return (
@@ -185,7 +203,17 @@ const App: React.FC = () => {
                 <button onClick={resetFilters} className="text-xs text-orange-600 font-bold hover:underline">{t('resetFilters')}</button>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                    <Layers size={10} /> Year
+                  </label>
+                  <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+                    <option value="all">All Years</option>
+                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+
                 <FilterField label={t('dateStart')} icon={<Calendar size={12} />} type="date" value={startDate} onChange={setStartDate} />
                 <FilterField label={t('dateEnd')} icon={<Calendar size={12} />} type="date" value={endDate} onChange={setEndDate} />
                 
