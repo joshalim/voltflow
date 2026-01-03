@@ -108,7 +108,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                 <User className="text-orange-500" size={28} />
                 {selectedAccount}
               </h2>
-              <p className="text-slate-500 font-medium">Detailed session history and billing for this account.</p>
+              <p className="text-slate-500 font-medium">{t('printUserStatement')}</p>
             </div>
           </div>
           <button 
@@ -116,15 +116,14 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
             className="no-print flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
           >
             <FileText size={18} />
-            Print User Statement
+            {t('printUserStatement')}
           </button>
         </header>
 
-        {/* User Summary Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <DetailStatCard label="Total Sessions" value={selectedSummary.sessions} icon={<ListOrdered size={20} />} color="blue" />
-          <DetailStatCard label="Energy Consumed" value={`${selectedSummary.energy.toLocaleString()} kWh`} icon={<Zap size={20} />} color="orange" />
-          <DetailStatCard label="Total Amount" value={`$${selectedSummary.cost.toLocaleString()} COP`} icon={<DollarSign size={20} />} color="emerald" />
+          <DetailStatCard label={t('totalSessions')} value={selectedSummary.sessions} icon={<ListOrdered size={20} />} color="blue" />
+          <DetailStatCard label={t('totalEnergy')} value={`${selectedSummary.energy.toLocaleString()} kWh`} icon={<Zap size={20} />} color="orange" />
+          <DetailStatCard label={t('totalRevenue')} value={`$${selectedSummary.cost.toLocaleString()} COP`} icon={<DollarSign size={20} />} color="emerald" />
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print-border-none">
@@ -132,12 +131,12 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                  <th className="px-6 py-4">Date & Time</th>
-                  <th className="px-6 py-4">Station / Connector</th>
-                  <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4">Usage</th>
-                  <th className="px-6 py-4">Rate</th>
-                  <th className="px-6 py-4 text-right">Cost</th>
+                  <th className="px-6 py-4">{t('startTime')}</th>
+                  <th className="px-6 py-4">{t('station')} / {t('connector')}</th>
+                  <th className="px-6 py-4">{t('duration')}</th>
+                  <th className="px-6 py-4">{t('usage')}</th>
+                  <th className="px-6 py-4">{t('rate')}</th>
+                  <th className="px-6 py-4 text-right">{t('cost')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -211,7 +210,7 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
             className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-100"
           >
             <FileText size={18} />
-            Export PDF
+            {t('exportPdf')}
           </button>
         </div>
       </header>
@@ -245,70 +244,25 @@ const AccountReports: React.FC<AccountReportsProps> = ({ transactions, lang }) =
                     </div>
                   </td>
                   <td className="px-6 py-6 font-bold text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <ListOrdered size={14} className="text-slate-300" />
-                      {s.sessions}
-                    </div>
+                    {s.sessions}
                   </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-2 font-bold text-slate-700">
-                      <Zap size={14} className="text-orange-400" />
-                      {s.energy.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                      <span className="text-[10px] text-slate-400 font-normal">kWh</span>
-                    </div>
+                  <td className="px-6 py-6 font-bold text-slate-700">
+                    {s.energy.toLocaleString()} kWh
                   </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-2 font-black text-slate-900">
-                      <DollarSign size={14} className="text-emerald-500" />
-                      ${s.cost.toLocaleString()}
-                      <span className="text-[10px] text-slate-400 font-normal">COP</span>
-                    </div>
+                  <td className="px-6 py-6 font-black text-slate-900">
+                    ${s.cost.toLocaleString()} COP
                   </td>
-                  <td className="px-6 py-6">
-                    <span className="text-xs font-bold text-slate-400">
-                      ${Math.round(s.avgRate).toLocaleString()} / kWh
-                    </span>
+                  <td className="px-6 py-6 text-xs font-bold text-slate-400">
+                    ${Math.round(s.avgRate).toLocaleString()} / kWh
                   </td>
                   <td className="no-print px-6 py-6 text-right">
                     <ChevronRight size={18} className="text-slate-200 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" />
                   </td>
                 </tr>
               ))}
-              {accountData.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-slate-400 italic font-medium">
-                    No account data available for the selected period.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Account Distribution Visual Summary (Mini Cards) */}
-      <div className="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {accountData.slice(0, 3).map((s, idx) => (
-          <div key={idx} onClick={() => setSelectedAccount(s.account)} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-between cursor-pointer hover:border-orange-200 transition-all">
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-100 px-2 py-1 rounded-md">Top Account #{idx+1}</span>
-              <User size={16} className="text-slate-300" />
-            </div>
-            <h4 className="text-xl font-black text-slate-800 mb-4">{s.account}</h4>
-            <div className="space-y-2">
-               <div className="flex justify-between text-xs font-bold">
-                 <span className="text-slate-400">Revenue Contribution</span>
-                 <span className="text-slate-900">${s.cost.toLocaleString()} COP</span>
-               </div>
-               <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                 <div 
-                   className="bg-orange-500 h-full rounded-full" 
-                   style={{ width: `${(s.cost / (accountData[0]?.cost || 1)) * 100}%` }}
-                 />
-               </div>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );

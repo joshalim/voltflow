@@ -131,6 +131,7 @@ const App: React.FC = () => {
 
   const handleDeleteExpense = (id: string) => {
     if (confirm('Delete this expense?')) {
+      // Fixed: changed 'i' to 'e.id' to correctly filter by ID
       setExpenses(prev => prev.filter(e => e.id !== id));
     }
   };
@@ -206,10 +207,10 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                    <Layers size={10} /> Year
+                    <Layers size={10} /> {t('year')}
                   </label>
                   <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-                    <option value="all">All Years</option>
+                    <option value="all">{t('allYears')}</option>
                     {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
@@ -224,7 +225,7 @@ const App: React.FC = () => {
                         <MapPin size={10} /> {t('station')}
                       </label>
                       <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={selectedStation} onChange={(e) => setSelectedStation(e.target.value)}>
-                        <option value="all">All Stations</option>
+                        <option value="all">{t('allStations')}</option>
                         {uniqueStations.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
@@ -234,7 +235,7 @@ const App: React.FC = () => {
                         <UserIcon size={10} /> {t('account')}
                       </label>
                       <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
-                        <option value="all">All Accounts</option>
+                        <option value="all">{t('allAccounts')}</option>
                         {uniqueAccounts.map(acc => <option key={acc} value={acc}>{acc}</option>)}
                       </select>
                     </div>
@@ -286,6 +287,8 @@ const App: React.FC = () => {
             setTransactions([...data, ...transactions]); 
             setIsImportModalOpen(false); 
           }} 
+          // Fixed: added missing lang prop
+          lang={lang}
         />
       )}
     </div>

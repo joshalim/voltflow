@@ -29,19 +29,13 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
   
-  // Rule State
   const [targetType, setTargetType] = useState<'ACCOUNT' | 'GROUP' | 'DEFAULT'>('ACCOUNT');
   const [targetId, setTargetId] = useState('');
   const [connector, setConnector] = useState('');
   const [rate, setRate] = useState('');
 
-  // Group State
   const [groupName, setGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState('');
-
-  // Editing state
-  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
-  const [editRuleValues, setEditRuleValues] = useState<Partial<PricingRule>>({});
 
   const handleAddRule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,22 +68,21 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
     <div className="space-y-10 animate-in fade-in duration-500">
       <header>
         <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('pricingRules')}</h2>
-        <p className="text-slate-500 font-medium">Manage Account Groups and fine-tune pricing hierarchies.</p>
+        <p className="text-slate-500 font-medium">{t('pricingRulesSubtitle')}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* PANEL: Account Groups */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Users size={20} className="text-orange-500" />
-              Account Groupings
+              {t('accountGroupings')}
             </h3>
             
             <form onSubmit={handleAddGroup} className="space-y-4 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Group Name</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('account')} {t('year')}</label>
                   <input 
                     type="text" value={groupName} onChange={e => setGroupName(e.target.value)}
                     placeholder="e.g. VIP Fleet"
@@ -98,14 +91,16 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                 </div>
                 <div className="space-y-1 text-right">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1 invisible">Action</label>
-                  <button type="submit" className="w-full bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-900 transition">Create Group</button>
+                  <button type="submit" className="w-full bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-900 transition">
+                    {t('createGroup')}
+                  </button>
                 </div>
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Member Accounts (Comma separated)</label>
                 <textarea 
                   value={groupMembers} onChange={e => setGroupMembers(e.target.value)}
-                  placeholder="John Doe, Account-123, Porteria-A..."
+                  placeholder="John Doe, Account-123..."
                   className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium h-16 outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -125,27 +120,24 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                     {group.members.map((m, i) => (
                       <span key={i} className="px-2 py-0.5 bg-slate-100 text-[10px] font-bold text-slate-500 rounded-md border border-slate-200">{m}</span>
                     ))}
-                    {group.members.length === 0 && <span className="text-[10px] text-slate-400 italic">No members added</span>}
                   </div>
                 </div>
               ))}
-              {groups.length === 0 && <p className="text-center py-10 text-slate-300 text-sm italic">No groups defined yet.</p>}
             </div>
           </div>
         </div>
 
-        {/* PANEL: Pricing Rules */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Target size={20} className="text-orange-500" />
-              Pricing Rules & Overrides
+              {t('pricingRules')}
             </h3>
 
             <form onSubmit={handleAddRule} className="space-y-4 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Type</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('targetType')}</label>
                     <select 
                       className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
                       value={targetType} onChange={e => setTargetType(e.target.value as any)}
@@ -156,7 +148,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Entity</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('targetEntity')}</label>
                     {targetType === 'GROUP' ? (
                       <select 
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
@@ -179,7 +171,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Connector</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('connector')}</label>
                     <input 
                       type="text" value={connector} onChange={e => setConnector(e.target.value)}
                       placeholder="e.g. CCS2"
@@ -187,7 +179,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rate ($COP)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('rate')} ($COP)</label>
                     <div className="flex gap-2">
                       <input 
                         type="number" value={rate} onChange={e => setRate(e.target.value)}
@@ -204,9 +196,9 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
               <table className="w-full text-left">
                 <thead>
                   <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                    <th className="pb-3 px-2">Target</th>
-                    <th className="pb-3 px-2">Connector</th>
-                    <th className="pb-3 px-2">Rate</th>
+                    <th className="pb-3 px-2">{t('account')}</th>
+                    <th className="pb-3 px-2">{t('connector')}</th>
+                    <th className="pb-3 px-2">{t('rate')}</th>
                     <th className="pb-3 px-2 text-right"></th>
                   </tr>
                 </thead>
@@ -214,12 +206,9 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                   {rules.map(rule => (
                     <tr key={rule.id} className="hover:bg-slate-50/50">
                       <td className="py-3 px-2">
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{rule.targetType}</span>
-                          <span className="font-bold text-slate-800 text-xs">
-                            {rule.targetType === 'GROUP' ? groups.find(g => g.id === rule.targetId)?.name || 'Unknown Group' : rule.targetId}
-                          </span>
-                        </div>
+                        <span className="font-bold text-slate-800 text-xs">
+                          {rule.targetType === 'GROUP' ? groups.find(g => g.id === rule.targetId)?.name || 'Unknown' : rule.targetId}
+                        </span>
                       </td>
                       <td className="py-3 px-2">
                         <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-slate-600">{rule.connector}</span>
@@ -240,14 +229,13 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
       <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl flex gap-4">
         <div className="bg-blue-500 p-2 rounded-xl text-white h-fit"><Info size={24} /></div>
         <div className="space-y-1">
-          <h4 className="font-black text-blue-900">How Pricing is Calculated</h4>
+          <h4 className="font-black text-blue-900">{t('howPricingCalculated')}</h4>
           <p className="text-xs text-blue-700 leading-relaxed">
             When a transaction is imported, VoltFlow looks for a match in this order: 
             <br />
-            <strong>1. Account Priority</strong> (Porteria/Jorge) → 
-            <strong>2. Specific Account Rules</strong> → 
-            <strong>3. Account Group Rules</strong> → 
-            <strong>4. Global Default.</strong>
+            <strong>1. Specific Account Rules</strong> → 
+            <strong>2. Account Group Rules</strong> → 
+            <strong>3. Global Default.</strong>
           </p>
         </div>
       </div>

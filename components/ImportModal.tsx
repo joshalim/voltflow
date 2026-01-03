@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { X, Upload, CheckCircle2, AlertTriangle, FileWarning } from 'lucide-react';
-import { EVTransaction, PricingRule, AccountGroup } from '../types';
+import { EVTransaction, PricingRule, AccountGroup, Language } from '../types';
+import { TRANSLATIONS } from '../constants';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -9,6 +10,7 @@ interface ImportModalProps {
   pricingRules: PricingRule[];
   accountGroups: AccountGroup[];
   existingTxIds: Set<string>;
+  lang: Language;
 }
 
 const REQUIRED_HEADERS = [
@@ -23,22 +25,22 @@ const REQUIRED_HEADERS = [
 
 const SPECIAL_ACCOUNTS = ['PORTERIA', 'Jorge Iluminacion', 'John Iluminacion'];
 
-const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRules, accountGroups, existingTxIds }) => {
+const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRules, accountGroups, existingTxIds, lang }) => {
   const [dragActive, setDragActive] = useState(false);
   const [parsedData, setParsedData] = useState<EVTransaction[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [duplicateCount, setDuplicateCount] = useState(0);
 
+  const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+
   const getAppliedRate = (account: string, connector: string): number => {
-    // 1. Priority logic for critical accounts
     if (SPECIAL_ACCOUNTS.includes(account)) {
       if (connector === 'CCS2') return 2500;
       if (connector === 'CHADEMO') return 2000;
       if (connector === 'J1772') return 1500;
     }
 
-    // 2. Exact Rule Match (Specific Account)
     const exactRule = pricingRules.find(r => 
       r.targetType === 'ACCOUNT' && 
       r.targetId === account && 
@@ -46,7 +48,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
     );
     if (exactRule) return exactRule.ratePerKWh;
 
-    // 3. Group Rule Match
     const parentGroup = accountGroups.find(g => g.members.includes(account));
     if (parentGroup) {
       const groupRule = pricingRules.find(r => 
@@ -57,7 +58,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       if (groupRule) return groupRule.ratePerKWh;
     }
 
-    // 4. Default Rule Fallback
     const defaultRule = pricingRules.find(r => r.targetType === 'DEFAULT');
     return defaultRule ? defaultRule.ratePerKWh : 1200;
   };
@@ -91,7 +91,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
 
       const txId = row[hMap['TxID']].trim();
       
-      // Check for duplicates (existing in app OR existing in this CSV batch)
       if (existingTxIds.has(txId) || batchTxIds.has(txId)) {
         duplicates++;
         return;
@@ -171,7 +170,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-orange-900/20 backdrop-blur-sm">
       <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-xl font-black text-slate-800">Import Transactions</h3>
+          <h3 className="text-xl font-black text-slate-800">{t('importTransactions')}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
         </div>
         <div className="p-6">
@@ -181,16 +180,16 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
               <div className="bg-orange-100 p-4 rounded-full mb-4">
                 <Upload size={32} className="text-orange-600" />
               </div>
-              <p className="font-black text-slate-800">Drop your CSV export here</p>
+              <p className="font-black text-slate-800">{t('dropCsv')}</p>
               <p className="text-xs text-slate-400 mt-1 mb-6">File must contain TxID, Station, Connector, Account, etc.</p>
               <label className="bg-orange-600 text-white px-8 py-3 rounded-xl cursor-pointer font-bold shadow-lg shadow-orange-100 hover:bg-orange-700 transition">
-                Browse Files <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+                {t('browseFiles')} <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
               </label>
             </div>
           ) : isProcessing ? (
             <div className="py-20 flex flex-col items-center justify-center">
               <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mb-4"></div>
-              <p className="font-bold text-slate-600">Validating entries...</p>
+              <p className="font-bold text-slate-600">{t('validatingEntries')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -198,7 +197,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
                 <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 flex items-center gap-4 animate-in slide-in-from-bottom-2">
                   <div className="bg-emerald-500 p-2 rounded-lg"><CheckCircle2 className="text-white" size={20} /></div>
                   <div>
-                    <p className="text-emerald-900 font-black leading-tight">{parsedData.length} New Transactions</p>
+                    <p className="text-emerald-900 font-black leading-tight">{parsedData.length} {t('newTransactions')}</p>
                     <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-0.5">Ready for billing update</p>
                   </div>
                 </div>
@@ -208,7 +207,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
                 <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 flex items-center gap-4 animate-in slide-in-from-bottom-2">
                   <div className="bg-amber-500 p-2 rounded-lg"><FileWarning className="text-white" size={20} /></div>
                   <div>
-                    <p className="text-amber-900 font-black leading-tight">{duplicateCount} Duplicates Skipped</p>
+                    <p className="text-amber-900 font-black leading-tight">{duplicateCount} {t('duplicatesSkipped')}</p>
                     <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mt-0.5">TxIDs already exist in system</p>
                   </div>
                 </div>
@@ -216,7 +215,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
 
               {parsedData.length === 0 && duplicateCount > 0 && (
                 <div className="p-6 text-center">
-                  <p className="text-slate-500 font-medium">No new transactions found in this file.</p>
+                  <p className="text-slate-500 font-medium">No new transactions found.</p>
                   <button onClick={() => {setDuplicateCount(0); setParsedData([]);}} className="mt-4 text-orange-600 font-bold hover:underline">Try another file</button>
                 </div>
               )}
@@ -224,20 +223,14 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
               {parsedData.length > 0 && (
                 <>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pricing Logic Applied</h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('howPricingCalculated')}</h4>
                     <p className="text-xs text-slate-600">Calculated rates based on <span className="font-bold text-orange-600">Account Groups</span> and <span className="font-bold text-orange-600">Individual Overrides</span>.</p>
                   </div>
-                  <button onClick={() => onImport(parsedData)} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-[0.98] transition">Finalize Import</button>
+                  <button onClick={() => onImport(parsedData)} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-[0.98] transition">
+                    {t('finalizeImport')}
+                  </button>
                 </>
               )}
-            </div>
-          )}
-          {validationErrors.length > 0 && (
-            <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold">
-               <div className="flex items-center gap-2 mb-2"><AlertTriangle size={14} /> Validation Errors</div>
-               <ul className="list-disc list-inside space-y-1">
-                 {validationErrors.map((err, i) => <li key={i}>{err}</li>)}
-               </ul>
             </div>
           )}
         </div>

@@ -58,14 +58,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="Search Account or ID..." 
+              placeholder={t('searchAccountPlaceholder')} 
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 transition-all" 
               value={searchTerm} 
               onChange={e => setSearchTerm(e.target.value)} 
             />
           </div>
           <button onClick={onClear} className="px-4 py-2 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
-            Clear
+            {t('clear')}
           </button>
         </div>
       </div>
@@ -75,13 +75,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-wider">
               <tr>
-                <th className="px-6 py-4">Account / ID</th>
-                <th className="px-6 py-4">Station / Type</th>
-                <th className="px-6 py-4">Usage & Rate</th>
-                <th className="px-6 py-4">Charge Time</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Payment</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-6 py-4">{t('account')} / {t('txId')}</th>
+                <th className="px-6 py-4">{t('station')} / {t('connector')}</th>
+                <th className="px-6 py-4">{t('usage')} & {t('rate')}</th>
+                <th className="px-6 py-4">{t('duration')}</th>
+                <th className="px-6 py-4">{t('status')}</th>
+                <th className="px-6 py-4">{t('paymentType')}</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -134,14 +134,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
                       <button 
                         onClick={() => setEditingTx(tx)} 
                         className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                        title="Edit Transaction"
+                        title={t('edit')}
                       >
                         <Edit3 size={18} />
                       </button>
                       <button 
                         onClick={() => onDelete(tx.id)} 
                         className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Delete Transaction"
+                        title={t('delete')}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -152,7 +152,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
               {processed.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-20 text-center text-slate-300 italic">
-                    No transactions found for the current filters.
+                    No transactions found.
                   </td>
                 </tr>
               )}
@@ -166,15 +166,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-xl font-black text-slate-800">Edit Transaction</h3>
-                <p className="text-xs text-slate-400 mt-1">Update payment details for <span className="font-bold text-slate-600">{editingTx.id}</span></p>
+                <h3 className="text-xl font-black text-slate-800">{t('editTransaction')}</h3>
+                <p className="text-xs text-slate-400 mt-1">{t('saveChanges')} <span className="font-bold text-slate-600">{editingTx.id}</span></p>
               </div>
               <button onClick={() => setEditingTx(null)} className="text-slate-400 hover:text-slate-600"><XCircle size={24} /></button>
             </div>
             
             <form onSubmit={handleUpdate} className="space-y-5">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Payment Status</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('status')}</label>
                 <select 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
                   value={editingTx.status} 
@@ -186,7 +186,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
               </div>
               
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Payment Method</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('paymentType')}</label>
                 <select 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
                   value={editingTx.paymentType} 
@@ -201,7 +201,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
 
               {editingTx.status === 'PAID' && (
                 <div className="animate-in slide-in-from-top-2 duration-300">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Payment Date</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('paymentDate')}</label>
                   <input 
                     type="date" 
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
@@ -213,10 +213,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onCle
 
               <div className="flex gap-3 pt-4">
                 <button type="submit" className="flex-1 bg-orange-600 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-95 transition-all">
-                  Save Changes
+                  {t('saveChanges')}
                 </button>
                 <button type="button" onClick={() => setEditingTx(null)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-2xl font-black hover:bg-slate-200 active:scale-95 transition-all">
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             </form>

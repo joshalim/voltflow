@@ -49,14 +49,14 @@ const AIInsights: React.FC<AIInsightsProps> = ({ transactions, lang }) => {
             <h2 className="text-3xl font-black text-slate-800">{t('aiInsights')}</h2>
             <Sparkles size={20} className="text-orange-500" />
           </div>
-          <p className="text-slate-500 font-medium">Smart Charge infrastructure analysis via Gemini.</p>
+          <p className="text-slate-500 font-medium">{t('aiAnalysisSubtitle')}</p>
         </div>
         <button 
           onClick={fetchAnalysis} disabled={loading}
           className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl font-bold hover:bg-orange-700 disabled:opacity-50 transition shadow-lg shadow-orange-100"
         >
           {loading ? <RefreshCw className="animate-spin" size={20} /> : <BrainCircuit size={20} />}
-          {loading ? 'Analyzing...' : 'Refresh AI'}
+          {loading ? t('analyzing') : t('refreshAi')}
         </button>
       </header>
 

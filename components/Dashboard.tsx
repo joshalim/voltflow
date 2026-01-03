@@ -75,7 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-slate-50 p-6 rounded-3xl border shadow-sm">
-          <h3 className="text-lg font-bold mb-6">Financial Trends (Revenue vs Expenses)</h3>
+          <h3 className="text-lg font-bold mb-6">{t('financialTrends')} ({t('revenueVsExpenses')})</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timeSeriesData}>
@@ -84,15 +84,15 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" fill="#eff6ff" strokeWidth={3} />
-                <Area type="monotone" dataKey="expense" name="Expenses" stroke="#f43f5e" fill="#fff1f2" strokeWidth={3} />
+                <Area type="monotone" dataKey="revenue" name={t('totalRevenue')} stroke="#3b82f6" fill="#eff6ff" strokeWidth={3} />
+                <Area type="monotone" dataKey="expense" name={t('totalExpenses')} stroke="#f43f5e" fill="#fff1f2" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bg-slate-50 p-6 rounded-3xl border shadow-sm">
-          <h3 className="text-lg font-bold mb-6">Payment Distribution</h3>
+          <h3 className="text-lg font-bold mb-6">{t('paymentDistribution')}</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -115,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) =
               <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis fontSize={10} tickLine={false} axisLine={false} />
               <Tooltip />
-              <Area type="monotone" dataKey="energy" name="Energy (kWh)" stroke="#f97316" fill="#fff7ed" strokeWidth={3} />
+              <Area type="monotone" dataKey="energy" name={t('totalEnergy')} stroke="#f97316" fill="#fff7ed" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

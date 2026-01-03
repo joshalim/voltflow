@@ -19,7 +19,6 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Edit state
   const [editingExp, setEditingExp] = useState<Expense | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +49,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
     <div className="space-y-8 animate-in fade-in duration-500">
       <header>
         <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('expenses')}</h2>
-        <p className="text-slate-500 font-medium">Track operational costs and infrastructure maintenance.</p>
+        <p className="text-slate-500 font-medium">{t('expensesSubtitle')}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -68,7 +67,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                 </label>
                 <input 
                   type="text" value={desc} onChange={e => setDesc(e.target.value)}
-                  placeholder="e.g. Electricity Bill, Repair..."
+                  placeholder="e.g. Electricity Bill..."
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -128,31 +127,16 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1">
-                          <button 
-                            onClick={() => setEditingExp(exp)} 
-                            className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                            title="Edit Expense"
-                          >
+                          <button onClick={() => setEditingExp(exp)} className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all">
                             <Edit3 size={16} />
                           </button>
-                          <button 
-                            onClick={() => onDelete(exp.id)} 
-                            className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete Expense"
-                          >
+                          <button onClick={() => onDelete(exp.id)} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
                             <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {expenses.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-20 text-center text-slate-300 italic font-medium">
-                        No expenses recorded yet.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -173,7 +157,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
             
             <form onSubmit={handleUpdate} className="space-y-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('expenseDescription')}</label>
                 <input 
                   type="text" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
@@ -183,7 +167,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
               </div>
               
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Amount ($COP)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('expenseAmount')}</label>
                 <input 
                   type="number" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
@@ -193,7 +177,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Date</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t('expenseDate')}</label>
                 <input 
                   type="date" 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500" 
@@ -204,10 +188,10 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
 
               <div className="flex gap-3 pt-4">
                 <button type="submit" className="flex-1 bg-orange-600 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-95 transition-all">
-                  Save Changes
+                  {t('saveChanges')}
                 </button>
                 <button type="button" onClick={() => setEditingExp(null)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-2xl font-black hover:bg-slate-200 active:scale-95 transition-all">
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             </form>
