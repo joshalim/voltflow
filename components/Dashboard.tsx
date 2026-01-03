@@ -1,27 +1,34 @@
 
 import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { EVTransaction, Language } from '../types';
-import { Zap, DollarSign, Clock, Users, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { EVTransaction, Language, Expense } from '../types';
+import { Zap, DollarSign, Clock, Users, ShieldCheck, ShieldAlert, ReceiptText, TrendingUp } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 
 interface DashboardProps {
   transactions: EVTransaction[];
+  expenses: Expense[];
   lang: Language;
 }
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#6366f1', '#f43f5e'];
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, lang }) => {
+const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
   const financialStats = useMemo(() => {
-    return transactions.reduce((acc, tx) => {
+    const revenue = transactions.reduce((acc, tx) => {
       if (tx.status === 'PAID') acc.paid += tx.costCOP;
       else acc.unpaid += tx.costCOP;
       return acc;
     }, { paid: 0, unpaid: 0 });
-  }, [transactions]);
+
+    const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalRevenue = revenue.paid + revenue.unpaid;
+    const netProfit = totalRevenue - totalExpenses;
+
+    return { ...revenue, totalRevenue, totalExpenses, netProfit };
+  }, [transactions, expenses]);
 
   const paymentBreakdown = useMemo(() => {
     const methods: Record<string, number> = {};
@@ -34,13 +41,23 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, lang }) => {
   }, [transactions]);
 
   const timeSeriesData = useMemo(() => {
-    const days: Record<string, number> = {};
+    const days: Record<string, { date: string, energy: number, revenue: number, expense: number }> = {};
+    
     transactions.forEach(tx => {
       const date = tx.startTime.split('T')[0];
-      days[date] = (days[date] || 0) + tx.meterKWh;
+      if (!days[date]) days[date] = { date, energy: 0, revenue: 0, expense: 0 };
+      days[date].energy += tx.meterKWh;
+      days[date].revenue += tx.costCOP;
     });
-    return Object.entries(days).map(([date, energy]) => ({ date, energy })).sort((a, b) => a.date.localeCompare(b.date));
-  }, [transactions]);
+
+    expenses.forEach(exp => {
+      const date = exp.date;
+      if (!days[date]) days[date] = { date, energy: 0, revenue: 0, expense: 0 };
+      days[date].expense += exp.amount;
+    });
+
+    return Object.values(days).sort((a, b) => a.date.localeCompare(b.date));
+  }, [transactions, expenses]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -49,15 +66,16 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, lang }) => {
         <p className="text-slate-500 font-medium">{t('performanceMetrics')}</p>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard label={t('totalRevenue')} value={`$${(financialStats.paid + financialStats.unpaid).toLocaleString()} COP`} icon={<DollarSign size={24} />} color="orange" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label={t('totalRevenue')} value={`$${financialStats.totalRevenue.toLocaleString()} COP`} icon={<DollarSign size={24} />} color="blue" />
+        <StatCard label={t('totalExpenses')} value={`$${financialStats.totalExpenses.toLocaleString()} COP`} icon={<ReceiptText size={24} />} color="rose" />
+        <StatCard label={t('netProfit')} value={`$${financialStats.netProfit.toLocaleString()} COP`} icon={<TrendingUp size={24} />} color="emerald" />
         <StatCard label={t('totalPaid')} value={`$${financialStats.paid.toLocaleString()} COP`} icon={<ShieldCheck size={24} />} color="emerald" />
-        <StatCard label={t('totalUnpaid')} value={`$${financialStats.unpaid.toLocaleString()} COP`} icon={<ShieldAlert size={24} />} color="rose" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-slate-50 p-6 rounded-3xl border shadow-sm">
-          <h3 className="text-lg font-bold mb-6">{t('energyTrend')}</h3>
+          <h3 className="text-lg font-bold mb-6">Financial Trends (Revenue vs Expenses)</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timeSeriesData}>
@@ -65,7 +83,9 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, lang }) => {
                 <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="energy" stroke="#f97316" fill="#fff7ed" strokeWidth={3} />
+                <Legend />
+                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" fill="#eff6ff" strokeWidth={3} />
+                <Area type="monotone" dataKey="expense" name="Expenses" stroke="#f43f5e" fill="#fff1f2" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -85,6 +105,21 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, lang }) => {
           </div>
         </div>
       </div>
+      
+      <div className="bg-slate-50 p-6 rounded-3xl border shadow-sm">
+        <h3 className="text-lg font-bold mb-6">{t('energyTrend')}</h3>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={timeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip />
+              <Area type="monotone" dataKey="energy" name="Energy (kWh)" stroke="#f97316" fill="#fff7ed" strokeWidth={3} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 };
@@ -93,7 +128,9 @@ const StatCard = ({ label, value, icon, color }: any) => (
   <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
     <div className={`p-3 rounded-2xl mb-4 w-fit ${
       color === 'orange' ? 'bg-orange-50 text-orange-600' : 
-      color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+      color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : 
+      color === 'blue' ? 'bg-blue-50 text-blue-600' :
+      'bg-rose-50 text-rose-600'
     }`}>
       {icon}
     </div>

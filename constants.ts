@@ -1,13 +1,7 @@
 
 import { EVTransaction, PricingRule, Translations } from './types';
 
-export const INITIAL_PRICING_RULES: PricingRule[] = [
-  { id: '1', targetId: 'Corporate-A', targetType: 'ACCOUNT', connector: 'Type 2', ratePerKWh: 1100 },
-  { id: '2', targetId: 'Corporate-A', targetType: 'ACCOUNT', connector: 'CCS2', ratePerKWh: 1500 },
-  { id: '3', targetId: 'Public-User', targetType: 'ACCOUNT', connector: 'Type 2', ratePerKWh: 1350 },
-  { id: '4', targetId: 'Public-User', targetType: 'ACCOUNT', connector: 'CCS2', ratePerKWh: 1800 },
-  { id: '5', targetId: 'Default', targetType: 'DEFAULT', connector: 'Default', ratePerKWh: 1200 },
-];
+export const INITIAL_PRICING_RULES: PricingRule[] = [];
 
 export const TRANSLATIONS: Translations = {
   dashboard: { en: 'Dashboard', es: 'Tablero' },
@@ -15,11 +9,14 @@ export const TRANSLATIONS: Translations = {
   aiInsights: { en: 'AI Insights', es: 'Información IA' },
   pricingRules: { en: 'Pricing Settings', es: 'Ajustes de Precios' },
   reports: { en: 'Account Reports', es: 'Reportes por Cuenta' },
+  expenses: { en: 'Expenses', es: 'Gastos' },
   importCsv: { en: 'Import CSV', es: 'Importar CSV' },
   networkOverview: { en: 'Network Overview', es: 'Vista General de Red' },
   performanceMetrics: { en: 'Real-time performance metrics.', es: 'Métricas de rendimiento en tiempo real.' },
   totalEnergy: { en: 'Total Energy', es: 'Energía Total' },
   totalRevenue: { en: 'Total Revenue', es: 'Ingresos Totales' },
+  totalExpenses: { en: 'Total Expenses', es: 'Gastos Totales' },
+  netProfit: { en: 'Net Profit', es: 'Utilidad Neta' },
   avgSession: { en: 'Avg. Session', es: 'Sesión Promedio' },
   activeUsers: { en: 'Active Accounts', es: 'Cuentas Activas' },
   energyTrend: { en: 'Energy Consumption Trend', es: 'Tendencia de Consumo de Energía' },
@@ -54,36 +51,10 @@ export const TRANSLATIONS: Translations = {
   totalPaid: { en: 'Total Paid', es: 'Total Pagado' },
   totalUnpaid: { en: 'Total Unpaid', es: 'Total Pendiente' },
   edit: { en: 'Edit', es: 'Editar' },
+  addExpense: { en: 'Add Expense', es: 'Agregar Gasto' },
+  expenseDescription: { en: 'Description', es: 'Descripción' },
+  expenseAmount: { en: 'Amount ($COP)', es: 'Monto ($COP)' },
+  expenseDate: { en: 'Date', es: 'Fecha' },
 };
 
-export const MOCK_DATA: EVTransaction[] = [
-  {
-    id: 'TX-9901',
-    station: 'Downtown Plaza',
-    connector: 'CCS2',
-    account: 'Corporate-A',
-    startTime: '2024-05-01T08:30:00Z',
-    endTime: '2024-05-01T09:45:00Z',
-    meterKWh: 45.5,
-    costCOP: 68250,
-    durationMinutes: 75,
-    appliedRate: 1500,
-    status: 'PAID',
-    paymentType: 'NEQUI',
-    paymentDate: '2024-05-01T10:00:00Z'
-  },
-  {
-    id: 'TX-9902',
-    station: 'Riverside Mall',
-    connector: 'Type 2',
-    account: 'Public-User',
-    startTime: '2024-05-01T10:00:00Z',
-    endTime: '2024-05-01T11:20:00Z',
-    meterKWh: 12.2,
-    costCOP: 16470,
-    durationMinutes: 80,
-    appliedRate: 1350,
-    status: 'UNPAID',
-    paymentType: 'N/A'
-  }
-];
+export const MOCK_DATA: EVTransaction[] = [];

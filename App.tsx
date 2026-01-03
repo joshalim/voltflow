@@ -1,32 +1,38 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText } from 'lucide-react';
 import { MOCK_DATA, TRANSLATIONS, INITIAL_PRICING_RULES } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
 import AIInsights from './components/AIInsights';
 import PricingSettings from './components/PricingSettings';
 import AccountReports from './components/AccountReports';
+import Expenses from './components/Expenses';
 
 const App: React.FC = () => {
   const [transactions, setTransactions] = useState<EVTransaction[]>(() => {
     const saved = localStorage.getItem('smartcharge_transactions_v2');
-    return saved ? JSON.parse(saved) : MOCK_DATA;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(() => {
     const saved = localStorage.getItem('smartcharge_pricing');
-    return saved ? JSON.parse(saved) : INITIAL_PRICING_RULES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [accountGroups, setAccountGroups] = useState<AccountGroup[]>(() => {
     const saved = localStorage.getItem('smartcharge_groups');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const saved = localStorage.getItem('smartcharge_expenses');
+    return saved ? JSON.parse(saved) : [];
+  });
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses'>('dashboard');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
 
@@ -48,6 +54,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('smartcharge_groups', JSON.stringify(accountGroups));
   }, [accountGroups]);
+
+  useEffect(() => {
+    localStorage.setItem('smartcharge_expenses', JSON.stringify(expenses));
+  }, [expenses]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -73,6 +83,15 @@ const App: React.FC = () => {
     });
   }, [transactions, startDate, endDate, selectedStation, accountFilter]);
 
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      const date = new Date(exp.date);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      return (!start || date >= start) && (!end || date <= end);
+    });
+  }, [expenses, startDate, endDate]);
+
   const handleUpdateTransaction = (id: string, updates: Partial<EVTransaction>) => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   };
@@ -80,6 +99,16 @@ const App: React.FC = () => {
   const handleDeleteTransaction = (id: string) => {
     if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
       setTransactions(prev => prev.filter(tx => tx.id !== id));
+    }
+  };
+
+  const handleAddExpense = (exp: Omit<Expense, 'id'>) => {
+    setExpenses(prev => [...prev, { ...exp, id: Date.now().toString() }]);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    if (confirm('Delete this expense?')) {
+      setExpenses(prev => prev.filter(e => e.id !== id));
     }
   };
 
@@ -112,6 +141,7 @@ const App: React.FC = () => {
           <NavItem icon={<LayoutDashboard size={20} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={20} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
           <NavItem icon={<BarChart3 size={20} />} label={t('reports')} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+          <NavItem icon={<ReceiptText size={20} />} label={t('expenses')} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
           <NavItem icon={<BrainCircuit size={20} />} label={t('aiInsights')} active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
           <NavItem icon={<Settings size={20} />} label={t('pricingRules')} active={activeTab === 'pricing'} onClick={() => setActiveTab('pricing')} />
         </nav>
@@ -139,7 +169,7 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto space-y-8">
           
           {/* Global Filter Bar */}
-          {(['dashboard', 'transactions', 'reports'].includes(activeTab)) && (
+          {(['dashboard', 'transactions', 'reports', 'expenses'].includes(activeTab)) && (
             <div className="no-print bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 animate-in slide-in-from-top-4 duration-300">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-slate-800 font-bold">
@@ -153,30 +183,34 @@ const App: React.FC = () => {
                 <FilterField label={t('dateStart')} icon={<Calendar size={12} />} type="date" value={startDate} onChange={setStartDate} />
                 <FilterField label={t('dateEnd')} icon={<Calendar size={12} />} type="date" value={endDate} onChange={setEndDate} />
                 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                    <MapPin size={10} /> {t('station')}
-                  </label>
-                  <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={selectedStation} onChange={(e) => setSelectedStation(e.target.value)}>
-                    <option value="all">All Stations</option>
-                    {uniqueStations.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
+                {activeTab !== 'expenses' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                        <MapPin size={10} /> {t('station')}
+                      </label>
+                      <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={selectedStation} onChange={(e) => setSelectedStation(e.target.value)}>
+                        <option value="all">All Stations</option>
+                        {uniqueStations.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                    <UserIcon size={10} /> {t('account')}
-                  </label>
-                  <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
-                    <option value="all">All Accounts</option>
-                    {uniqueAccounts.map(acc => <option key={acc} value={acc}>{acc}</option>)}
-                  </select>
-                </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                        <UserIcon size={10} /> {t('account')}
+                      </label>
+                      <select className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 font-medium" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+                        <option value="all">All Accounts</option>
+                        {uniqueAccounts.map(acc => <option key={acc} value={acc}>{acc}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} lang={lang} />}
+          {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} expenses={filteredExpenses} lang={lang} />}
           {activeTab === 'transactions' && (
             <TransactionTable 
               transactions={filteredTransactions} 
@@ -187,6 +221,7 @@ const App: React.FC = () => {
             />
           )}
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
+          {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'pricing' && (
             <PricingSettings 

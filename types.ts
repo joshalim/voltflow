@@ -18,6 +18,13 @@ export interface EVTransaction {
   paymentDate?: string;
 }
 
+export interface Expense {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+}
+
 export interface AccountGroup {
   id: string;
   name: string;
