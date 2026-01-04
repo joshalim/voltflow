@@ -115,44 +115,53 @@ const App: React.FC = () => {
   }, [expenses, startDate, endDate, selectedYear]);
 
   const handleUpdateTransaction = (id: string, updates: Partial<EVTransaction>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   };
 
   const handleBulkUpdateTransactions = (ids: string[], updates: Partial<EVTransaction>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setTransactions(prev => prev.map(tx => ids.includes(tx.id) ? { ...tx, ...updates } : tx));
   };
 
   const handleDeleteTransaction = (id: string) => {
+    if (currentUserRole !== 'ADMIN') return;
     if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
       setTransactions(prev => prev.filter(tx => tx.id !== id));
     }
   };
 
   const handleBulkDeleteTransactions = (ids: string[]) => {
+    if (currentUserRole !== 'ADMIN') return;
     if (confirm(`Are you sure you want to delete ${ids.length} selected transactions? This action cannot be undone.`)) {
       setTransactions(prev => prev.filter(tx => !ids.includes(tx.id)));
     }
   };
 
   const handleAddExpense = (exp: Omit<Expense, 'id'>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setExpenses(prev => [...prev, { ...exp, id: Date.now().toString() }]);
   };
 
   const handleUpdateExpense = (id: string, updates: Partial<Expense>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, ...updates } : exp));
   };
 
   const handleDeleteExpense = (id: string) => {
+    if (currentUserRole !== 'ADMIN') return;
     if (confirm('Delete this expense?')) {
       setExpenses(prev => prev.filter(e => e.id !== id));
     }
   };
 
   const handleUpdatePricingRule = (id: string, updates: Partial<PricingRule>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setPricingRules(prev => prev.map(rule => rule.id === id ? { ...rule, ...updates } : rule));
   };
 
   const handleImportBackup = async (file: File) => {
+    if (currentUserRole !== 'ADMIN') return;
     const restored = await databaseService.importBackup(file);
     if (restored) {
       setTransactions(restored.transactions);
@@ -184,6 +193,7 @@ const App: React.FC = () => {
   };
 
   const handleImportUsers = (newUsers: Omit<User, 'id' | 'createdAt'>[]) => {
+    if (currentUserRole !== 'ADMIN') return;
     const usersWithMeta = newUsers.map(u => ({
       ...u,
       id: Math.random().toString(36).substr(2, 9),
@@ -193,6 +203,7 @@ const App: React.FC = () => {
   };
 
   const handleAddCharger = (charger: Omit<EVCharger, 'id' | 'createdAt'>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setChargers(prev => [...prev, { 
       ...charger, 
       id: `charger-${Date.now()}`, 
@@ -201,10 +212,12 @@ const App: React.FC = () => {
   };
 
   const handleUpdateCharger = (id: string, updates: Partial<EVCharger>) => {
+    if (currentUserRole !== 'ADMIN') return;
     setChargers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
   const handleDeleteCharger = (id: string) => {
+    if (currentUserRole !== 'ADMIN') return;
     if (confirm('Are you sure you want to delete this charger?')) {
       setChargers(prev => prev.filter(c => c.id !== id));
     }
@@ -260,12 +273,14 @@ const App: React.FC = () => {
              </div>
           </div>
 
-          <button 
-            onClick={() => setIsImportModalOpen(true)} 
-            className="flex items-center justify-center gap-2 w-full bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 transition shadow-lg shadow-orange-100"
-          >
-            <PlusCircle size={18} /> {t('importCsv')}
-          </button>
+          {currentUserRole === 'ADMIN' && (
+            <button 
+              onClick={() => setIsImportModalOpen(true)} 
+              className="flex items-center justify-center gap-2 w-full bg-orange-600 text-white py-3 rounded-xl font-bold hover:bg-orange-700 transition shadow-lg shadow-orange-100"
+            >
+              <PlusCircle size={18} /> {t('importCsv')}
+            </button>
+          )}
           
           <button 
             onClick={() => setCurrentUserRole(null)} 
@@ -330,6 +345,7 @@ const App: React.FC = () => {
             <TransactionTable 
               transactions={filteredTransactions} 
               lang={lang} 
+              role={currentUserRole}
               onClear={() => { if(confirm('Are you sure you want to clear all transactions?')) setTransactions([]); }} 
               onUpdate={handleUpdateTransaction}
               onDelete={handleDeleteTransaction}
@@ -338,9 +354,9 @@ const App: React.FC = () => {
             />
           )}
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
-          {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
-          {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} influxConfig={influxConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
+          {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} role={currentUserRole} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
+          {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} role={currentUserRole} onRefresh={activeTab === 'ai' ? () => {} : undefined} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} influxConfig={influxConfig} lang={lang} role={currentUserRole} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
           {activeTab === 'chargers' && currentUserRole === 'ADMIN' && (
             <ChargerManagement 
               chargers={chargers}
@@ -395,7 +411,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {isImportModalOpen && (
+      {isImportModalOpen && currentUserRole === 'ADMIN' && (
         <ImportModal 
           onClose={() => setIsImportModalOpen(false)} 
           pricingRules={pricingRules} 

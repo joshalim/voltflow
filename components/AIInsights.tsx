@@ -1,19 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrainCircuit, Sparkles, RefreshCw, Lightbulb, TrendingUp, AlertTriangle } from 'lucide-react';
-import { EVTransaction, Language } from '../types';
+import { EVTransaction, Language, UserRole } from '../types';
 import { getAIAnalysis } from '../services/geminiService';
 import { TRANSLATIONS } from '../constants';
 
 interface AIInsightsProps {
   transactions: EVTransaction[];
   lang: Language;
+  role: UserRole;
+  onRefresh?: () => void;
 }
 
-const AIInsights: React.FC<AIInsightsProps> = ({ transactions, lang }) => {
+const AIInsights: React.FC<AIInsightsProps> = ({ transactions, lang, role }) => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const isAdmin = role === 'ADMIN';
 
   const fetchAnalysis = async () => {
     if (transactions.length === 0) return;
@@ -51,13 +54,15 @@ const AIInsights: React.FC<AIInsightsProps> = ({ transactions, lang }) => {
           </div>
           <p className="text-slate-500 font-medium">{t('aiAnalysisSubtitle')}</p>
         </div>
-        <button 
-          onClick={fetchAnalysis} disabled={loading}
-          className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl font-bold hover:bg-orange-700 disabled:opacity-50 transition shadow-lg shadow-orange-100"
-        >
-          {loading ? <RefreshCw className="animate-spin" size={20} /> : <BrainCircuit size={20} />}
-          {loading ? t('analyzing') : t('refreshAi')}
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={fetchAnalysis} disabled={loading}
+            className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-2xl font-bold hover:bg-orange-700 disabled:opacity-50 transition shadow-lg shadow-orange-100"
+          >
+            {loading ? <RefreshCw className="animate-spin" size={20} /> : <BrainCircuit size={20} />}
+            {loading ? t('analyzing') : t('refreshAi')}
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -78,7 +83,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ transactions, lang }) => {
                   <p key={i} className={line.includes('**') ? 'font-black text-slate-900 mt-4' : ''}>
                     {line.replace(/\*\*/g, '')}
                   </p>
-                )) : "Click Refresh to see AI-driven suggestions."}
+                )) : "AI-driven Suggestions will appear here."}
               </div>
             )}
           </div>

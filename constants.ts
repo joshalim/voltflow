@@ -160,6 +160,9 @@ export const TRANSLATIONS: Translations = {
   passwordsMismatch: { en: 'Passwords do not match.', es: 'Las contraseñas no coinciden.' },
   incorrectCurrentPass: { en: 'Incorrect current password.', es: 'Contraseña actual incorrecta.' },
   updateSuccess: { en: 'Credentials updated successfully.', es: 'Credenciales actualizadas correctamente.' },
+  viewOnlyAccounts: { en: 'View-Only Accounts', es: 'Cuentas de Solo Vista' },
+  viewOnlyAccountsSubtitle: { en: 'Manage accounts that can only view data without making changes.', es: 'Gestione cuentas que solo pueden ver datos sin realizar cambios.' },
+  addViewOnly: { en: 'Add View-Only Account', es: 'Agregar Cuenta de Solo Vista' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

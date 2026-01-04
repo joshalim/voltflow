@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Expense, Language } from '../types';
+import { Expense, Language, UserRole } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { Plus, Trash2, Calendar, Receipt, DollarSign, Tag, Edit3, XCircle } from 'lucide-react';
 
@@ -10,15 +10,16 @@ interface ExpensesProps {
   onUpdate: (id: string, expense: Partial<Expense>) => void;
   onDelete: (id: string) => void;
   lang: Language;
+  role: UserRole;
 }
 
-// Formatter to use dot as thousands separator and 0 decimals
 const formatCOP = (num: number) => {
   return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
 };
 
-const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete, lang }) => {
+const Expenses: React.FC<ExpensesProps> = ({ expenses, role, onAdd, onUpdate, onDelete, lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const isAdmin = role === 'ADMIN';
 
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
@@ -28,7 +29,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!desc || !amount || !date) return;
+    if (!desc || !amount || !date || !isAdmin) return;
     onAdd({
       description: desc,
       amount: parseFloat(amount),
@@ -40,7 +41,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingExp) {
+    if (editingExp && isAdmin) {
       onUpdate(editingExp.id, {
         description: editingExp.description,
         amount: editingExp.amount,
@@ -72,8 +73,9 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                 </label>
                 <input 
                   type="text" value={desc} onChange={e => setDesc(e.target.value)}
+                  disabled={!isAdmin}
                   placeholder="e.g. Electricity Bill..."
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                 />
               </div>
 
@@ -83,8 +85,9 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                 </label>
                 <input 
                   type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                  disabled={!isAdmin}
                   placeholder="0"
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                 />
               </div>
 
@@ -94,14 +97,17 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                 </label>
                 <input 
                   type="date" value={date} onChange={e => setDate(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500"
+                  disabled={!isAdmin}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                 />
               </div>
 
-              <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-100 hover:bg-orange-700 active:scale-[0.98] transition mt-2 flex items-center justify-center gap-2">
-                <Plus size={20} />
-                {t('addExpense')}
-              </button>
+              {isAdmin && (
+                <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-100 hover:bg-orange-700 active:scale-[0.98] transition mt-2 flex items-center justify-center gap-2">
+                  <Plus size={20} />
+                  {t('addExpense')}
+                </button>
+              )}
             </form>
           </div>
         </div>
@@ -131,14 +137,16 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
                         <span className="font-black text-rose-600">-${formatCOP(exp.amount)} COP</span>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button onClick={() => setEditingExp(exp)} className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all">
-                            <Edit3 size={16} />
-                          </button>
-                          <button onClick={() => onDelete(exp.id)} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        {isAdmin && (
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => setEditingExp(exp)} className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all">
+                              <Edit3 size={16} />
+                            </button>
+                            <button onClick={() => onDelete(exp.id)} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -149,7 +157,7 @@ const Expenses: React.FC<ExpensesProps> = ({ expenses, onAdd, onUpdate, onDelete
         </div>
       </div>
 
-      {editingExp && (
+      {editingExp && isAdmin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
             <div className="flex justify-between items-start mb-6">

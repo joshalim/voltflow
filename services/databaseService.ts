@@ -1,7 +1,7 @@
 
 import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig } from '../types';
 
-const STORAGE_KEY = 'voltflow_db_v7';
+const STORAGE_KEY = 'voltflow_db_v8';
 
 export interface AppDatabase {
   transactions: EVTransaction[];
@@ -28,8 +28,9 @@ const DEFAULT_DB: AppDatabase = {
   authConfig: {
     adminUser: 'smartcharge',
     adminPass: 'qazwsx!',
-    genericUser: 'user',
-    genericPass: 'user123'
+    viewOnlyAccounts: [
+      { id: 'default-user', user: 'user', pass: 'user123' }
+    ]
   },
   users: [],
   chargers: [],
@@ -54,10 +55,19 @@ export const databaseService = {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return DEFAULT_DB;
       const parsed = JSON.parse(saved);
-      // Migrate if authConfig is missing
+      
+      // Ensure authConfig structure is up to date
       if (!parsed.authConfig) {
-        return { ...parsed, authConfig: DEFAULT_DB.authConfig };
+        parsed.authConfig = DEFAULT_DB.authConfig;
+      } else if (!parsed.authConfig.viewOnlyAccounts) {
+        // Migration from v7 to v8
+        const oldUser = parsed.authConfig.genericUser || 'user';
+        const oldPass = parsed.authConfig.genericPass || 'user123';
+        parsed.authConfig.viewOnlyAccounts = [{ id: 'migrated-user', user: oldUser, pass: oldPass }];
+        delete parsed.authConfig.genericUser;
+        delete parsed.authConfig.genericPass;
       }
+      
       return parsed;
     } catch (error) {
       console.error('Failed to load from database:', error);

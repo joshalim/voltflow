@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus, InfluxConfig } from '../types';
+import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus, InfluxConfig, UserRole } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { Terminal, Activity, Play, Square, Info, ShieldCheck, Zap, Server, Cpu, Radio, Power, Clock, Database, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import ConnectorIcon from './ConnectorIcon';
@@ -10,6 +10,7 @@ interface OcppMonitorProps {
   ocppConfig: OcppConfig;
   influxConfig: InfluxConfig;
   lang: Language;
+  role: UserRole;
   onNewTransaction: (tx: EVTransaction) => void;
   pricingRules: PricingRule[];
   accountGroups: AccountGroup[];
@@ -21,6 +22,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
   ocppConfig, 
   influxConfig,
   lang, 
+  role,
   onNewTransaction, 
   pricingRules, 
   accountGroups, 
@@ -32,6 +34,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
   const [activeChargerId, setActiveChargerId] = useState<string>(chargers[0]?.id || ocppConfig.chargePointId);
   const logEndRef = useRef<HTMLDivElement>(null);
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const isAdmin = role === 'ADMIN';
 
   const addLog = (direction: 'IN' | 'OUT', type: string, payload: any) => {
     const newLog: OcppLog = {
@@ -61,7 +64,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
   };
 
   const simulateOcppFlow = async () => {
-    if (isSimulating) return;
+    if (isSimulating || !isAdmin) return;
     setIsSimulating(true);
     setLogs([]);
 
@@ -174,14 +177,16 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
            >
              {chargers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
            </select>
-           <button 
-            onClick={simulateOcppFlow} 
-            disabled={isSimulating || chargers.length === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 disabled:opacity-50 transition shadow-lg shadow-slate-100"
-          >
-            {isSimulating ? <Activity className="animate-pulse" size={20} /> : <Play size={20} />}
-            {isSimulating ? 'SIMULATING...' : 'SIMULATE FLOW'}
-          </button>
+           {isAdmin && (
+             <button 
+              onClick={simulateOcppFlow} 
+              disabled={isSimulating || chargers.length === 0}
+              className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 disabled:opacity-50 transition shadow-lg shadow-slate-100"
+            >
+              {isSimulating ? <Activity className="animate-pulse" size={20} /> : <Play size={20} />}
+              {isSimulating ? 'SIMULATING...' : 'SIMULATE FLOW'}
+            </button>
+           )}
         </div>
       </header>
 
@@ -211,7 +216,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center justify-center py-4 text-slate-300 gap-2 italic text-xs font-medium">
-                  <Clock size={12} /> Waiting for ID Tag...
+                  <Clock size={12} /> {isAdmin ? 'Waiting for ID Tag...' : 'Standby'}
                 </div>
               )}
 

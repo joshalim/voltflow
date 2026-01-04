@@ -7,11 +7,16 @@ export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 export type UserRole = 'ADMIN' | 'USER' | null;
 
+export interface ViewOnlyAccount {
+  id: string;
+  user: string;
+  pass: string;
+}
+
 export interface AuthConfig {
   adminUser: string;
   adminPass: string;
-  genericUser: string;
-  genericPass: string;
+  viewOnlyAccounts: ViewOnlyAccount[];
 }
 
 export interface InfluxConfig {

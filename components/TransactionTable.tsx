@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { EVTransaction, Language, TransactionStatus, PaymentMethod } from '../types';
+import { EVTransaction, Language, TransactionStatus, PaymentMethod, UserRole } from '../types';
 import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, CheckSquare, Square, Layers, X, FileText } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import ConnectorIcon from './ConnectorIcon';
@@ -14,9 +14,9 @@ interface TransactionTableProps {
   onBulkUpdate: (ids: string[], updates: Partial<EVTransaction>) => void;
   onBulkDelete: (ids: string[]) => void;
   lang: Language;
+  role: UserRole;
 }
 
-// Global formatters
 const formatCOP = (num: number) => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(num);
 const formatKWh = (num: number) => num.toFixed(2);
 
@@ -27,7 +27,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   onDelete, 
   onBulkUpdate, 
   onBulkDelete, 
-  lang 
+  lang,
+  role
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -40,6 +41,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   const [bulkPaymentDate, setBulkPaymentDate] = useState<string>('');
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const isAdmin = role === 'ADMIN';
 
   const processed = useMemo(() => {
     return transactions.filter(tx => 
@@ -50,6 +52,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   }, [transactions, searchTerm]);
 
   const toggleSelectAll = () => {
+    if (!isAdmin) return;
     if (selectedIds.size === processed.length) {
       setSelectedIds(new Set());
     } else {
@@ -58,6 +61,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   };
 
   const toggleSelect = (id: string) => {
+    if (!isAdmin) return;
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -74,7 +78,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingTx) {
+    if (editingTx && isAdmin) {
       onUpdate(editingTx.id, {
         status: editingTx.status,
         paymentType: editingTx.paymentType,
@@ -86,18 +90,22 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
   const handleBulkUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    onBulkUpdate(Array.from(selectedIds), {
-      status: bulkStatus,
-      paymentType: bulkPaymentType,
-      paymentDate: bulkStatus === 'PAID' ? (bulkPaymentDate || new Date().toISOString()) : undefined
-    });
-    setIsBulkEditing(false);
-    setSelectedIds(new Set());
+    if (isAdmin) {
+      onBulkUpdate(Array.from(selectedIds), {
+        status: bulkStatus,
+        paymentType: bulkPaymentType,
+        paymentDate: bulkStatus === 'PAID' ? (bulkPaymentDate || new Date().toISOString()) : undefined
+      });
+      setIsBulkEditing(false);
+      setSelectedIds(new Set());
+    }
   };
 
   const handleBulkDelete = () => {
-    onBulkDelete(Array.from(selectedIds));
-    setSelectedIds(new Set());
+    if (isAdmin) {
+      onBulkDelete(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    }
   };
 
   return (
@@ -118,9 +126,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               onChange={e => setSearchTerm(e.target.value)} 
             />
           </div>
-          <button onClick={onClear} className="px-4 py-2 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
-            {t('clear')}
-          </button>
+          {isAdmin && (
+            <button onClick={onClear} className="px-4 py-2 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
+              {t('clear')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -129,11 +139,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-wider">
               <tr>
-                <th className="px-6 py-4 w-10">
-                  <button onClick={toggleSelectAll} className="text-slate-400 hover:text-orange-500 transition-colors">
-                    {selectedIds.size === processed.length && processed.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
-                  </button>
-                </th>
+                {isAdmin && (
+                  <th className="px-6 py-4 w-10">
+                    <button onClick={toggleSelectAll} className="text-slate-400 hover:text-orange-500 transition-colors">
+                      {selectedIds.size === processed.length && processed.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </button>
+                  </th>
+                )}
                 <th className="px-6 py-4">{t('account')} / {t('txId')}</th>
                 <th className="px-6 py-4">{t('startTime')}</th>
                 <th className="px-6 py-4">{t('station')} / {t('connector')}</th>
@@ -149,11 +161,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 const isSelected = selectedIds.has(tx.id);
                 return (
                   <tr key={tx.id} className={`hover:bg-slate-50/50 transition-colors group ${isSelected ? 'bg-orange-50/30' : ''}`}>
-                    <td className="px-6 py-4">
-                      <button onClick={() => toggleSelect(tx.id)} className={`${isSelected ? 'text-orange-600' : 'text-slate-300'} hover:text-orange-500 transition-colors`}>
-                        {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                      </button>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4">
+                        <button onClick={() => toggleSelect(tx.id)} className={`${isSelected ? 'text-orange-600' : 'text-slate-300'} hover:text-orange-500 transition-colors`}>
+                          {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                        </button>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-800 group-hover:text-orange-600 transition-colors">{tx.account}</p>
                       <p className="text-[10px] text-slate-400 font-mono">{tx.id}</p>
@@ -216,20 +230,24 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                         >
                           <FileText size={18} />
                         </button>
-                        <button 
-                          onClick={() => setEditingTx(tx)} 
-                          className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                          title={t('edit')}
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => onDelete(tx.id)} 
-                          className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title={t('delete')}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button 
+                              onClick={() => setEditingTx(tx)} 
+                              className="p-2 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
+                              title={t('edit')}
+                            >
+                              <Edit3 size={18} />
+                            </button>
+                            <button 
+                              onClick={() => onDelete(tx.id)} 
+                              className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title={t('delete')}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -237,7 +255,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               })}
               {processed.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-20 text-center text-slate-300 italic">
+                  <td colSpan={isAdmin ? 9 : 8} className="px-6 py-20 text-center text-slate-300 italic">
                     No transactions found.
                   </td>
                 </tr>
@@ -247,7 +265,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       </div>
 
-      {selectedIds.size > 0 && (
+      {selectedIds.size > 0 && isAdmin && (
         <div className="no-print fixed bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 duration-300">
           <div className="bg-slate-900 text-white px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 border border-slate-700/50 backdrop-blur-xl">
             <div className="flex items-center gap-2 pr-6 border-r border-slate-700">
@@ -284,7 +302,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {isBulkEditing && (
+      {isBulkEditing && isAdmin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
             <div className="flex justify-between items-start mb-6">
@@ -334,13 +352,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 </div>
               )}
 
-              <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex gap-3">
-                <div className="p-2 bg-orange-200 rounded-lg h-fit"><Layers size={18} className="text-orange-700" /></div>
-                <p className="text-[10px] text-orange-800 font-bold leading-relaxed">
-                  Careful! This will overwrite the fields above for ALL {selectedIds.size} selected transactions. This action cannot be undone.
-                </p>
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <button type="submit" className="flex-1 bg-orange-600 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-95 transition-all">
                   Apply Changes
@@ -354,7 +365,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </div>
       )}
 
-      {editingTx && (
+      {editingTx && isAdmin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl scale-in-center">
             <div className="flex justify-between items-start mb-6">

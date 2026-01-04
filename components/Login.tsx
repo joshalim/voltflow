@@ -26,11 +26,15 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
 
     // Artificial delay for UX
     setTimeout(() => {
+      // Check Admin
       if (username === authConfig.adminUser && password === authConfig.adminPass) {
         onLogin('ADMIN');
-      } else if (username === authConfig.genericUser && password === authConfig.genericPass) {
+      } 
+      // Check all view-only accounts
+      else if (authConfig.viewOnlyAccounts.some(acc => acc.user === username && acc.pass === password)) {
         onLogin('USER');
-      } else {
+      } 
+      else {
         setError(t('invalidCredentials'));
       }
       setIsLoading(false);
@@ -39,7 +43,6 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 relative overflow-hidden">
-      {/* Decorative background blobs */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-100 rounded-full blur-[100px] opacity-50" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100 rounded-full blur-[100px] opacity-50" />
 
