@@ -1,17 +1,13 @@
-
-import React, { useState, useEffect } from 'react';
-import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, InfluxConfig, OcpiConfig, InfluxPrecision } from '../types';
+import React, { useState } from 'react';
+import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, OcpiConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-// Fix: Added Zap and DollarSign to the imported icons from lucide-react to resolve "Cannot find name" errors
-import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, Activity, Network, CheckCircle2, AlertTriangle, RefreshCw, Clock, Zap, DollarSign } from 'lucide-react';
-import { influxService } from '../services/influxService';
+import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, Network, Activity, Download, Zap, DollarSign } from 'lucide-react';
 
 interface PricingSettingsProps {
   rules: PricingRule[];
   groups: AccountGroup[];
   apiConfig: ApiConfig;
   ocppConfig: OcppConfig;
-  influxConfig: InfluxConfig;
   ocpiConfig: OcpiConfig;
   onAddRule: (rule: Omit<PricingRule, 'id'>) => void;
   onUpdateRule: (id: string, rule: Partial<PricingRule>) => void;
@@ -21,7 +17,6 @@ interface PricingSettingsProps {
   onDeleteGroup: (id: string) => void;
   onUpdateApiConfig: (config: Partial<ApiConfig>) => void;
   onUpdateOcppConfig: (config: Partial<OcppConfig>) => void;
-  onUpdateInfluxConfig: (config: Partial<InfluxConfig>) => void;
   onUpdateOcpiConfig: (config: Partial<OcpiConfig>) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
@@ -33,23 +28,16 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   groups, 
   apiConfig,
   ocppConfig,
-  influxConfig,
   ocpiConfig,
   onAddRule, 
   onDeleteRule, 
   onAddGroup,
   onDeleteGroup,
-  onUpdateApiConfig,
-  onUpdateOcppConfig,
-  onUpdateInfluxConfig,
   onUpdateOcpiConfig,
   onExportBackup,
   lang 
 }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
-  const [isInfluxHealthy, setIsInfluxHealthy] = useState<boolean | null>(null);
-  const [influxMessage, setInfluxMessage] = useState<string>('');
-  const [isTesting, setIsTesting] = useState(false);
   
   const [targetType, setTargetType] = useState<'ACCOUNT' | 'GROUP' | 'DEFAULT'>('ACCOUNT');
   const [targetId, setTargetId] = useState('');
@@ -58,36 +46,6 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
   const [groupName, setGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState('');
-
-  useEffect(() => {
-    if (influxConfig.url && influxConfig.isEnabled) {
-      influxService.checkHealth(influxConfig).then(res => {
-        setIsInfluxHealthy(res.healthy);
-        setInfluxMessage(res.message);
-      });
-    } else {
-      setIsInfluxHealthy(null);
-      setInfluxMessage('');
-    }
-  }, [influxConfig.url, influxConfig.isEnabled]);
-
-  const handleTestInflux = async () => {
-    setIsTesting(true);
-    setInfluxMessage('Testing connection...');
-    
-    const health = await influxService.checkHealth(influxConfig);
-    if (!health.healthy) {
-      setIsInfluxHealthy(false);
-      setInfluxMessage(`Health check failed: ${health.message}`);
-      setIsTesting(false);
-      return;
-    }
-
-    const writeTest = await influxService.testWritePermissions(influxConfig);
-    setIsInfluxHealthy(writeTest.success);
-    setInfluxMessage(writeTest.success ? 'Full Read/Write connection established!' : `Write error: ${writeTest.message}`);
-    setIsTesting(false);
-  };
 
   const handleAddRule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,74 +90,6 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
-          {/* InfluxDB v2 Settings */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                <Database size={20} className="text-purple-500" />
-                {t('influxDbSettings')}
-              </h3>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isInfluxHealthy === true ? 'bg-emerald-500 animate-pulse' : isInfluxHealthy === false ? 'bg-rose-500' : 'bg-slate-300'}`} />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {isInfluxHealthy === true ? t('connected') : isInfluxHealthy === false ? 'Error' : t('disconnected')}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-               <div className="flex items-center justify-between mb-2">
-                 <span className="text-sm font-bold text-slate-700">{t('enableIntegration')}</span>
-                 <button 
-                  onClick={() => onUpdateInfluxConfig({ isEnabled: !influxConfig.isEnabled })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${influxConfig.isEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}
-                 >
-                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${influxConfig.isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                 </button>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ConfigField label={t('influxUrl')} value={influxConfig.url} onChange={(v: string) => onUpdateInfluxConfig({ url: v })} placeholder="http://localhost:8086" icon={<Link2 size={12}/>} />
-                  <ConfigField label={t('influxOrg')} value={influxConfig.org} onChange={(v: string) => onUpdateInfluxConfig({ org: v })} placeholder="my-org" icon={<Activity size={12}/>} />
-                  <ConfigField label={t('influxBucket')} value={influxConfig.bucket} onChange={(v: string) => onUpdateInfluxConfig({ bucket: v })} placeholder="voltflow" icon={<Database size={12}/>} />
-                  <ConfigField label={t('influxToken')} value={influxConfig.token} onChange={(v: string) => onUpdateInfluxConfig({ token: v })} placeholder="API Token" icon={<Key size={12}/>} type="password" />
-                  <ConfigField label="Prefix" value={influxConfig.measurementPrefix} onChange={(v: string) => onUpdateInfluxConfig({ measurementPrefix: v })} placeholder="vlt_" icon={<Target size={12}/>} />
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                      <Clock size={12}/> Precision
-                    </label>
-                    <select 
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                      value={influxConfig.precision} 
-                      onChange={(e) => onUpdateInfluxConfig({ precision: e.target.value as InfluxPrecision })}
-                    >
-                      <option value="s">Seconds (s)</option>
-                      <option value="ms">Milliseconds (ms)</option>
-                      <option value="us">Microseconds (us)</option>
-                      <option value="ns">Nanoseconds (ns)</option>
-                    </select>
-                  </div>
-               </div>
-
-               <div className="pt-2 border-t border-slate-200 flex flex-col gap-3">
-                  <button 
-                    onClick={handleTestInflux}
-                    disabled={isTesting || !influxConfig.url || !influxConfig.isEnabled}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 disabled:opacity-50 transition"
-                  >
-                    {isTesting ? <RefreshCw size={14} className="animate-spin" /> : <Network size={14} />}
-                    Test Connection
-                  </button>
-                  {influxMessage && (
-                    <div className={`p-2 rounded-lg text-[10px] font-bold flex items-start gap-2 ${isInfluxHealthy ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                      {isInfluxHealthy ? <CheckCircle2 size={12} className="mt-0.5" /> : <AlertTriangle size={12} className="mt-0.5" />}
-                      {influxMessage}
-                    </div>
-                  )}
-               </div>
-            </div>
-          </div>
-
           {/* OCPI Roaming Settings */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
@@ -343,7 +233,16 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                     <option value="J1772">J1772 (AC)</option>
                   </select>
                 </div>
-                <TargetField label={t('ratePerKWh')} value={rate} onChange={setRate} placeholder="1200" icon={<DollarSign size={12}/>} type="number" />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                    <DollarSign size={12}/> {t('ratePerKWh')}
+                  </label>
+                  <input 
+                    type="number" value={rate} onChange={e => setRate(e.target.value)}
+                    placeholder="1200"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
               </div>
 
               <button type="submit" className="w-full bg-orange-600 text-white py-3 rounded-xl text-xs font-black hover:bg-orange-700 transition shadow-lg shadow-orange-100">
@@ -391,21 +290,6 @@ const ConfigField = ({ label, value, onChange, placeholder, icon, type = "text" 
   icon?: React.ReactNode; 
   type?: string 
 }) => (
-  <div className="space-y-1">
-    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-      {icon} {label}
-    </label>
-    <input 
-      type={type} 
-      value={value} 
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-orange-500"
-    />
-  </div>
-);
-
-const TargetField = ({ label, value, onChange, placeholder, icon, type = "text" }: any) => (
   <div className="space-y-1">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
       {icon} {label}

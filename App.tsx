@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, UserRole, OcpiConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -16,6 +15,7 @@ import ChargerManagement from './components/ChargerManagement';
 import Login from './components/Login';
 import SecuritySettings from './components/SecuritySettings';
 import { databaseService } from './services/databaseService';
+import { influxService } from './services/influxService';
 
 const App: React.FC = () => {
   const initialDb = databaseService.load();
@@ -37,7 +37,9 @@ const App: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
 
+  // Fix: Move state declarations above usage in useMemo to avoid TDZ errors
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedStation, setSelectedStation] = useState('all');
@@ -46,6 +48,7 @@ const App: React.FC = () => {
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
+  // Sync state to local storage
   useEffect(() => {
     setIsSaving(true);
     databaseService.save({
@@ -64,6 +67,22 @@ const App: React.FC = () => {
     const timer = setTimeout(() => setIsSaving(false), 800);
     return () => clearTimeout(timer);
   }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, ocpiConfig, authConfig, users, chargers]);
+
+  // Global InfluxDB Health Check
+  useEffect(() => {
+    const checkDb = async () => {
+      if (influxConfig.isEnabled) {
+        const health = await influxService.checkHealth(influxConfig);
+        setIsDbConnected(health.healthy);
+      } else {
+        setIsDbConnected(null);
+      }
+    };
+
+    checkDb();
+    const interval = setInterval(checkDb, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [influxConfig]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -263,16 +282,28 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
-          <div className="flex items-center justify-between px-2 py-1">
-             <div className="flex items-center gap-2">
-                {isSaving ? (
-                  <Save size={14} className="text-slate-300 animate-pulse" />
-                ) : (
-                  <CheckCircle2 size={14} className="text-emerald-500" />
-                )}
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {isSaving ? 'Saving...' : 'All Saved'}
-                </span>
+          <div className="space-y-3 px-2">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                   {isSaving ? (
+                     <Save size={14} className="text-slate-300 animate-pulse" />
+                   ) : (
+                     <CheckCircle2 size={14} className="text-emerald-500" />
+                   )}
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                     {isSaving ? 'Saving...' : 'All Saved'}
+                   </span>
+                </div>
+             </div>
+
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${isDbConnected === true ? 'bg-emerald-500 animate-pulse' : isDbConnected === false ? 'bg-rose-500' : 'bg-slate-300'}`} />
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                     {isDbConnected === true ? 'TSDB Connected' : isDbConnected === false ? 'TSDB Error' : 'TSDB Offline'}
+                   </span>
+                </div>
+                <Database size={12} className={isDbConnected ? 'text-purple-400' : 'text-slate-300'} />
              </div>
           </div>
 
@@ -385,7 +416,6 @@ const App: React.FC = () => {
               groups={accountGroups}
               apiConfig={apiConfig}
               ocppConfig={ocppConfig}
-              influxConfig={influxConfig}
               ocpiConfig={ocpiConfig}
               onAddRule={(r) => setPricingRules([...pricingRules, { ...r, id: Date.now().toString() }])} 
               onUpdateRule={handleUpdatePricingRule}
@@ -398,7 +428,6 @@ const App: React.FC = () => {
               onUpdateGroup={(id, updates) => setAccountGroups(accountGroups.map(g => g.id === id ? { ...g, ...updates } : g))}
               onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
               onUpdateOcppConfig={(updates) => setOcppConfig({ ...ocppConfig, ...updates })}
-              onUpdateInfluxConfig={(updates) => setInfluxConfig({ ...influxConfig, ...updates })}
               onUpdateOcpiConfig={(updates) => setOcpiConfig({ ...ocpiConfig, ...updates })}
               onExportBackup={() => databaseService.exportBackup()}
               onImportBackup={handleImportBackup}
