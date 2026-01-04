@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2 } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger } from './types';
 import Dashboard from './components/Dashboard';
@@ -217,7 +217,7 @@ const App: React.FC = () => {
         <nav className="flex-1 space-y-1">
           <NavItem icon={<LayoutDashboard size={20} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={20} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
-          <NavItem icon={<Activity size={20} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
+          <NavItem icon={<Server size={20} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
           <NavItem icon={<Settings2 size={20} />} label={t('chargerManagement')} active={activeTab === 'chargers'} onClick={() => setActiveTab('chargers')} />
           <NavItem icon={<Users size={20} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <NavItem icon={<BarChart3 size={20} />} label={t('reports')} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
@@ -306,7 +306,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} expenses={filteredExpenses} lang={lang} />}
+          {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} expenses={filteredExpenses} chargers={chargers} lang={lang} />}
           {activeTab === 'transactions' && (
             <TransactionTable 
               transactions={filteredTransactions} 
@@ -321,7 +321,7 @@ const App: React.FC = () => {
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
           {activeTab === 'chargers' && (
             <ChargerManagement 
               chargers={chargers}

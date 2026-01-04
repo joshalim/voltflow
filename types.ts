@@ -4,13 +4,17 @@ export type TransactionStatus = 'PAID' | 'UNPAID';
 export type EntityStatus = 'ACTIVE' | 'INACTIVE';
 export type UserType = 'PERSONAL' | 'BUSINESS';
 export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
-export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE';
+export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 
 export interface Connector {
   id: string;
-  type: string; // CCS2, CHADEMO, Type 2, J1772, etc.
+  type: string;
   powerKW: number;
   status: ConnectorStatus;
+  currentKWh?: number; // Live session data
+  currentPowerKW?: number; // Instantaneous draw
+  voltage?: number;
+  temperature?: number;
 }
 
 export interface EVCharger {
@@ -20,34 +24,39 @@ export interface EVCharger {
   status: ChargerStatus;
   connectors: Connector[];
   createdAt: string;
+  lastHeartbeat?: string;
+  model?: string;
+  firmwareVersion?: string;
+  vendor?: string;
 }
 
+// Added User interface to resolve import errors in multiple files
 export interface User {
   id: string;
-  userType: UserType;
   name: string;
   email: string;
   phone: string;
+  userType: UserType;
   cedula?: string;
   nit?: string;
   company?: string;
   rfidTag: string;
-  placa: string;
+  placa?: string;
   status: EntityStatus;
   createdAt: string;
 }
 
 export interface EVTransaction {
-  id: string; // TxID
-  station: string; // Station
-  connector: string; // Connector
-  account: string; // Account
-  startTime: string; // Start Time
-  endTime: string; // End Time
-  meterKWh: number; // Meter value(kW.h)
-  costCOP: number; // Calculated Cost ($COP)
-  durationMinutes: number; // Calculated Duration
-  appliedRate: number; // Applied Rate ($COP / kWh)
+  id: string;
+  station: string;
+  connector: string;
+  account: string;
+  startTime: string;
+  endTime: string;
+  meterKWh: number;
+  costCOP: number;
+  durationMinutes: number;
+  appliedRate: number;
   status: TransactionStatus;
   paymentType: PaymentMethod;
   paymentDate?: string;
@@ -63,12 +72,12 @@ export interface Expense {
 export interface AccountGroup {
   id: string;
   name: string;
-  members: string[]; // List of account names
+  members: string[];
 }
 
 export interface PricingRule {
   id: string;
-  targetId: string; // Account name or Group ID
+  targetId: string;
   targetType: 'ACCOUNT' | 'GROUP' | 'DEFAULT';
   connector: string;
   ratePerKWh: number;
