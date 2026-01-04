@@ -1,4 +1,5 @@
 
+
 export type PaymentMethod = 'NEQUI' | 'DAVIPLATA' | 'EFECTIVO' | 'N/A';
 export type TransactionStatus = 'PAID' | 'UNPAID';
 export type EntityStatus = 'ACTIVE' | 'INACTIVE';
@@ -26,8 +27,8 @@ declare global {
     /**
      * AIStudio property provided by the environment for API key selection.
      */
-    // Fix: Re-added readonly modifier to resolve modifier mismatch error with global Window interface
-    readonly aistudio: AIStudio;
+    // Fix: Removed readonly modifier to resolve modifier mismatch error with global Window interface
+    aistudio: AIStudio;
   }
 }
 

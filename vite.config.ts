@@ -9,7 +9,13 @@ export default defineConfig({
   },
   server: {
     port: 3080,
-    host: true
+    host: '0.0.0.0', // Explicitly bind to all interfaces
+    strictPort: true
+  },
+  preview: {
+    port: 3080,
+    host: '0.0.0.0',
+    strictPort: true
   },
   build: {
     outDir: 'dist',
