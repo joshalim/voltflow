@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, UserRole } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -13,6 +13,8 @@ import Expenses from './components/Expenses';
 import OcppMonitor from './components/OcppMonitor';
 import UserManagement from './components/UserManagement';
 import ChargerManagement from './components/ChargerManagement';
+import Login from './components/Login';
+import SecuritySettings from './components/SecuritySettings';
 import { databaseService } from './services/databaseService';
 
 const App: React.FC = () => {
@@ -25,10 +27,12 @@ const App: React.FC = () => {
   const [apiConfig, setApiConfig] = useState<ApiConfig>(initialDb.apiConfig);
   const [ocppConfig, setOcppConfig] = useState<OcppConfig>(initialDb.ocppConfig);
   const [influxConfig, setInfluxConfig] = useState<InfluxConfig>(initialDb.influxConfig);
+  const [authConfig, setAuthConfig] = useState<AuthConfig>(initialDb.authConfig);
   const [users, setUsers] = useState<User[]>(initialDb.users || []);
   const [chargers, setChargers] = useState<EVCharger[]>(initialDb.chargers || []);
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'ocpp' | 'users' | 'chargers'>('dashboard');
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'ocpp' | 'users' | 'chargers' | 'security'>('dashboard');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
@@ -51,12 +55,13 @@ const App: React.FC = () => {
       apiConfig,
       ocppConfig,
       influxConfig,
+      authConfig,
       users,
       chargers
     });
     const timer = setTimeout(() => setIsSaving(false), 800);
     return () => clearTimeout(timer);
-  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, users, chargers]);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, authConfig, users, chargers]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -157,6 +162,7 @@ const App: React.FC = () => {
       setApiConfig(restored.apiConfig);
       setOcppConfig(restored.ocppConfig);
       setInfluxConfig(restored.influxConfig);
+      setAuthConfig(restored.authConfig);
       setUsers(restored.users || []);
       setChargers(restored.chargers || []);
       alert('Database restored successfully.');
@@ -204,8 +210,12 @@ const App: React.FC = () => {
     }
   };
 
+  if (!currentUserRole) {
+    return <Login authConfig={authConfig} lang={lang} onLangChange={setLang} onLogin={setCurrentUserRole} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 animate-in fade-in duration-700">
       <aside className="no-print hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-30 shadow-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="bg-orange-500 p-2 rounded-lg shadow-lg shadow-orange-200">
@@ -221,12 +231,19 @@ const App: React.FC = () => {
           <NavItem icon={<LayoutDashboard size={20} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={20} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
           <NavItem icon={<Server size={20} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
-          <NavItem icon={<Settings2 size={20} />} label={t('chargerManagement')} active={activeTab === 'chargers'} onClick={() => setActiveTab('chargers')} />
-          <NavItem icon={<Users size={20} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+          {currentUserRole === 'ADMIN' && (
+            <>
+              <NavItem icon={<Settings2 size={20} />} label={t('chargerManagement')} active={activeTab === 'chargers'} onClick={() => setActiveTab('chargers')} />
+              <NavItem icon={<Users size={20} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+            </>
+          )}
           <NavItem icon={<BarChart3 size={20} />} label={t('reports')} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
           <NavItem icon={<ReceiptText size={20} />} label={t('expenses')} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
           <NavItem icon={<BrainCircuit size={20} />} label={t('aiInsights')} active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
-          <NavItem icon={<Settings size={20} />} label={t('pricingRules')} active={activeTab === 'pricing'} onClick={() => setActiveTab('pricing')} />
+          {currentUserRole === 'ADMIN' && (
+            <NavItem icon={<Settings size={20} />} label={t('pricingRules')} active={activeTab === 'pricing'} onClick={() => setActiveTab('pricing')} />
+          )}
+          <NavItem icon={<ShieldCheck size={20} />} label={t('security')} active={activeTab === 'security'} onClick={() => setActiveTab('security')} />
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
@@ -250,13 +267,12 @@ const App: React.FC = () => {
             <PlusCircle size={18} /> {t('importCsv')}
           </button>
           
-          <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-100">
-             <Globe size={16} className="text-slate-400" />
-             <div className="flex gap-1">
-                <button onClick={() => setLang('en')} className={`px-2 py-1 rounded-md text-[10px] font-bold ${lang === 'en' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}>ENG</button>
-                <button onClick={() => setLang('es')} className={`px-2 py-1 rounded-md text-[10px] font-bold ${lang === 'es' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}>ESP</button>
-             </div>
-          </div>
+          <button 
+            onClick={() => setCurrentUserRole(null)} 
+            className="flex items-center justify-center gap-2 w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold hover:bg-rose-100 transition"
+          >
+            <LogOut size={18} /> {t('logout')}
+          </button>
         </div>
       </aside>
 
@@ -325,7 +341,7 @@ const App: React.FC = () => {
           {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} influxConfig={influxConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
-          {activeTab === 'chargers' && (
+          {activeTab === 'chargers' && currentUserRole === 'ADMIN' && (
             <ChargerManagement 
               chargers={chargers}
               onAddCharger={handleAddCharger}
@@ -334,7 +350,7 @@ const App: React.FC = () => {
               lang={lang}
             />
           )}
-          {activeTab === 'users' && (
+          {activeTab === 'users' && currentUserRole === 'ADMIN' && (
             <UserManagement 
               users={users}
               onAddUser={(u) => setUsers([...users, { ...u, id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString() }])}
@@ -344,7 +360,7 @@ const App: React.FC = () => {
               lang={lang}
             />
           )}
-          {activeTab === 'pricing' && (
+          {activeTab === 'pricing' && currentUserRole === 'ADMIN' && (
             <PricingSettings 
               rules={pricingRules} 
               groups={accountGroups}
@@ -366,6 +382,14 @@ const App: React.FC = () => {
               onExportBackup={() => databaseService.exportBackup()}
               onImportBackup={handleImportBackup}
               lang={lang} 
+            />
+          )}
+          {activeTab === 'security' && (
+            <SecuritySettings 
+              authConfig={authConfig} 
+              onUpdateAuthConfig={(updates) => setAuthConfig({ ...authConfig, ...updates })} 
+              lang={lang} 
+              role={currentUserRole} 
             />
           )}
         </div>

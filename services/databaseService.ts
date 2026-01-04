@@ -1,7 +1,7 @@
 
-import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig } from '../types';
+import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig } from '../types';
 
-const STORAGE_KEY = 'voltflow_db_v6';
+const STORAGE_KEY = 'voltflow_db_v7';
 
 export interface AppDatabase {
   transactions: EVTransaction[];
@@ -11,6 +11,7 @@ export interface AppDatabase {
   apiConfig: ApiConfig;
   ocppConfig: OcppConfig;
   influxConfig: InfluxConfig;
+  authConfig: AuthConfig;
   users: User[];
   chargers: EVCharger[];
   lastUpdated: string;
@@ -24,6 +25,12 @@ const DEFAULT_DB: AppDatabase = {
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
   ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
   influxConfig: { url: '', token: '', org: '', bucket: '', isEnabled: false },
+  authConfig: {
+    adminUser: 'smartcharge',
+    adminPass: 'qazwsx!',
+    genericUser: 'user',
+    genericPass: 'user123'
+  },
   users: [],
   chargers: [],
   lastUpdated: new Date().toISOString()
@@ -46,7 +53,12 @@ export const databaseService = {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return DEFAULT_DB;
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Migrate if authConfig is missing
+      if (!parsed.authConfig) {
+        return { ...parsed, authConfig: DEFAULT_DB.authConfig };
+      }
+      return parsed;
     } catch (error) {
       console.error('Failed to load from database:', error);
       return DEFAULT_DB;
