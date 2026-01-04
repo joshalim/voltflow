@@ -163,6 +163,11 @@ export const TRANSLATIONS: Translations = {
   viewOnlyAccounts: { en: 'View-Only Accounts', es: 'Cuentas de Solo Vista' },
   viewOnlyAccountsSubtitle: { en: 'Manage accounts that can only view data without making changes.', es: 'Gestione cuentas que solo pueden ver datos sin realizar cambios.' },
   addViewOnly: { en: 'Add View-Only Account', es: 'Agregar Cuenta de Solo Vista' },
+  firmware: { en: 'Firmware', es: 'Firmware' },
+  lastHeartbeat: { en: 'Last Heartbeat', es: 'Último Latido' },
+  technicalSpecs: { en: 'Technical Metrics', es: 'Métricas Técnicas' },
+  avail: { en: 'Avail.', es: 'Disp.' },
+  busy: { en: 'Busy', es: 'Ocup.' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

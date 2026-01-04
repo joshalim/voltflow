@@ -18,7 +18,10 @@ import {
   Power,
   RefreshCw,
   Unlock,
-  Radio
+  Radio,
+  Cpu,
+  Clock,
+  LayoutGrid
 } from 'lucide-react';
 import ConnectorIcon from './ConnectorIcon';
 
@@ -134,6 +137,12 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
     return 'bg-emerald-50 text-emerald-600 border-emerald-100';
   };
 
+  const getConnectorSummary = (connectors: Connector[]) => {
+    const available = connectors.filter(c => c.status === 'AVAILABLE').length;
+    const total = connectors.length;
+    return { available, total };
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -151,98 +160,127 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {chargers.map(charger => (
-          <div key={charger.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group transition-all hover:border-orange-200">
-            <div className="p-6 space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl transition-all duration-500 ${
-                    charger.status === 'ONLINE' ? 'bg-emerald-50 text-emerald-600' : 
-                    charger.status === 'MAINTENANCE' ? 'bg-orange-50 text-orange-600' : 'bg-slate-50 text-slate-500'
-                  }`}>
-                    {actionLoading === `reboot-${charger.id}` ? (
-                      <RefreshCw size={20} className="animate-spin" />
-                    ) : (
-                      <Activity size={20} className={charger.status === 'ONLINE' ? 'animate-pulse' : ''} />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-slate-800 leading-tight">{charger.name}</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                      <MapPin size={10} className="text-orange-500" />
-                      {charger.location || 'No Location'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => startEdit(charger)} className="p-2 text-slate-300 hover:text-orange-500 transition-colors"><Edit3 size={16} /></button>
-                  <button onClick={() => onDeleteCharger(charger.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-2xl border border-slate-100">
-                <Radio size={14} className={charger.status === 'ONLINE' ? 'text-emerald-500' : 'text-slate-300'} />
-                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{t('liveStatus')}</span>
-                <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                  charger.status === 'ONLINE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-                }`}>{charger.status}</span>
-              </div>
-
-              <div className="space-y-2">
-                {charger.connectors.map(c => (
-                  <div key={c.id} className="flex items-center justify-between bg-slate-50/50 border border-slate-100 p-3 rounded-2xl group/conn hover:bg-white transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl border ${getConnectorColor(c.type)}`}>
-                        <ConnectorIcon type={c.type} size={20} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-slate-700">{c.type}</span>
-                          <span className="text-[9px] text-slate-400 font-bold">{c.powerKW}kW</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${
-                            c.status === 'AVAILABLE' ? 'bg-emerald-500' :
-                            c.status === 'CHARGING' ? 'bg-blue-500 animate-pulse' :
-                            c.status === 'OCCUPIED' ? 'bg-orange-500' : 'bg-red-500'
-                          }`} />
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{c.status}</span>
-                        </div>
-                      </div>
+        {chargers.map(charger => {
+          const { available, total } = getConnectorSummary(charger.connectors);
+          return (
+            <div key={charger.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group transition-all hover:border-orange-200">
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl transition-all duration-500 ${
+                      charger.status === 'ONLINE' ? 'bg-emerald-50 text-emerald-600' : 
+                      charger.status === 'MAINTENANCE' ? 'bg-orange-50 text-orange-600' : 'bg-slate-50 text-slate-500'
+                    }`}>
+                      {actionLoading === `reboot-${charger.id}` ? (
+                        <RefreshCw size={20} className="animate-spin" />
+                      ) : (
+                        <Activity size={20} className={charger.status === 'ONLINE' ? 'animate-pulse' : ''} />
+                      )}
                     </div>
-                    
-                    {c.status !== 'AVAILABLE' && (
-                      <button 
-                        onClick={() => handleRemoteUnlock(charger.id, c.id)}
-                        disabled={actionLoading === `unlock-${c.id}`}
-                        className="p-2 text-slate-300 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
-                        title={t('unlock')}
-                      >
-                        {actionLoading === `unlock-${c.id}` ? (
-                          <RefreshCw size={14} className="animate-spin" />
-                        ) : (
-                          <Unlock size={14} />
-                        )}
-                      </button>
-                    )}
+                    <div>
+                      <h4 className="font-black text-slate-800 leading-tight">{charger.name}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                        <MapPin size={10} className="text-orange-500" />
+                        {charger.location || 'No Location'}
+                      </p>
+                    </div>
                   </div>
-                ))}
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => startEdit(charger)} className="p-2 text-slate-300 hover:text-orange-500 transition-colors"><Edit3 size={16} /></button>
+                    <button onClick={() => onDeleteCharger(charger.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 py-1">
+                  <div className="flex-1 flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-2xl border border-slate-100">
+                    <Radio size={14} className={charger.status === 'ONLINE' ? 'text-emerald-500' : 'text-slate-300'} />
+                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{t('liveStatus')}</span>
+                    <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      charger.status === 'ONLINE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                    }`}>{charger.status}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-2xl border border-slate-100 min-w-[80px]">
+                    <LayoutGrid size={14} className="text-orange-500" />
+                    <span className="text-[10px] font-black text-slate-700">{available}/{total} <span className="text-slate-400">{t('avail')}</span></span>
+                  </div>
+                </div>
+
+                {/* Health & Hardware Specs */}
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50/50 rounded-2xl border border-slate-100">
+                   <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                         <Cpu size={12} />
+                         <span className="text-[9px] font-black uppercase tracking-tighter">{t('firmware')}</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-slate-700 ml-4.5">{charger.firmwareVersion || 'v1.0.0-std'}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                         <Clock size={12} />
+                         <span className="text-[9px] font-black uppercase tracking-tighter">{t('lastHeartbeat')}</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-slate-700 ml-4.5">
+                        {charger.lastHeartbeat ? new Date(charger.lastHeartbeat).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '---'}
+                      </p>
+                   </div>
+                </div>
+
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {charger.connectors.map(c => (
+                    <div key={c.id} className="flex items-center justify-between bg-slate-50/50 border border-slate-100 p-3 rounded-2xl group/conn hover:bg-white transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-xl border ${getConnectorColor(c.type)}`}>
+                          <ConnectorIcon type={c.type} size={20} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-700">{c.type}</span>
+                            <span className="text-[9px] text-slate-400 font-bold">{c.powerKW}kW</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              c.status === 'AVAILABLE' ? 'bg-emerald-500' :
+                              c.status === 'CHARGING' ? 'bg-blue-500 animate-pulse' :
+                              c.status === 'OCCUPIED' ? 'bg-orange-500' : 'bg-red-500'
+                            }`} />
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{c.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {c.status !== 'AVAILABLE' && (
+                        <button 
+                          onClick={() => handleRemoteUnlock(charger.id, c.id)}
+                          disabled={actionLoading === `unlock-${c.id}`}
+                          className="p-2 text-slate-300 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
+                          title={t('unlock')}
+                        >
+                          {actionLoading === `unlock-${c.id}` ? (
+                            <RefreshCw size={14} className="animate-spin" />
+                          ) : (
+                            <Unlock size={14} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-auto px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <button 
+                  onClick={() => handleRemoteReboot(charger.id)}
+                  disabled={actionLoading === `reboot-${charger.id}`}
+                  className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-orange-600 transition-all uppercase tracking-widest"
+                >
+                  <RefreshCw size={12} className={actionLoading === `reboot-${charger.id}` ? 'animate-spin' : ''} />
+                  {t('reboot')}
+                </button>
+                <span className="text-[10px] text-slate-400 font-bold">Config: {new Date(charger.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
-
-            <div className="mt-auto px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <button 
-                onClick={() => handleRemoteReboot(charger.id)}
-                disabled={actionLoading === `reboot-${charger.id}`}
-                className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-orange-600 transition-all uppercase tracking-widest"
-              >
-                <RefreshCw size={12} className={actionLoading === `reboot-${charger.id}` ? 'animate-spin' : ''} />
-                {t('reboot')}
-              </button>
-              <span className="text-[10px] text-slate-400 font-bold">Updated: {new Date(charger.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {chargers.length === 0 && !isAdding && (
           <div className="col-span-full py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400">
