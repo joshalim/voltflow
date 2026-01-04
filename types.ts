@@ -6,6 +6,7 @@ export type UserType = 'PERSONAL' | 'BUSINESS';
 export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 export type UserRole = 'ADMIN' | 'USER' | null;
+export type InfluxPrecision = 's' | 'ms' | 'us' | 'ns';
 
 // Global declaration to fix aistudio and environment variable TS errors
 declare global {
@@ -16,8 +17,6 @@ declare global {
     }
   }
 
-  // Removed redundant 'var process' declaration that caused "Cannot redeclare block-scoped variable 'process'" error.
-
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
@@ -26,10 +25,9 @@ declare global {
   interface Window {
     /**
      * AIStudio property provided by the environment for API key selection.
-     * Note: Removed 'readonly' modifier to match environment-provided type definition and resolve 
-     * "All declarations of 'aistudio' must have identical modifiers" error.
      */
-    aistudio: AIStudio;
+    // Fix: Added readonly modifier to match ambient declarations in the environment
+    readonly aistudio: AIStudio;
   }
 }
 
@@ -50,6 +48,8 @@ export interface InfluxConfig {
   token: string;
   org: string;
   bucket: string;
+  measurementPrefix: string;
+  precision: InfluxPrecision;
   isEnabled: boolean;
 }
 

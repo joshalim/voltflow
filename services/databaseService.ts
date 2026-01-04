@@ -25,7 +25,15 @@ const DEFAULT_DB: AppDatabase = {
   expenses: [],
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
   ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
-  influxConfig: { url: '', token: '', org: '', bucket: '', isEnabled: false },
+  influxConfig: { 
+    url: '', 
+    token: '', 
+    org: '', 
+    bucket: '', 
+    measurementPrefix: 'vlt_', 
+    precision: 's', 
+    isEnabled: false 
+  },
   ocpiConfig: { baseUrl: '', token: '', partyId: 'VLT', countryCode: 'CO', isEnabled: false },
   authConfig: {
     adminUser: 'smartcharge',
@@ -69,6 +77,10 @@ export const databaseService = {
       // Migration check
       if (!parsed.ocpiConfig) {
         parsed.ocpiConfig = DEFAULT_DB.ocpiConfig;
+      }
+      if (parsed.influxConfig && !parsed.influxConfig.measurementPrefix) {
+        parsed.influxConfig.measurementPrefix = DEFAULT_DB.influxConfig.measurementPrefix;
+        parsed.influxConfig.precision = DEFAULT_DB.influxConfig.precision;
       }
       
       return parsed;

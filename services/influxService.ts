@@ -2,10 +2,24 @@
 import { InfluxConfig, EVTransaction, EVCharger, Connector } from '../types';
 
 export const influxService = {
-  async writePoint(config: InfluxConfig, line: string) {
-    if (!config.isEnabled || !config.url) return;
+  normalizeUrl(url: string): string {
+    let normalized = url.trim();
+    if (!normalized) return '';
+    // Ensure protocol exists
+    if (!/^https?:\/\//i.test(normalized)) {
+      normalized = 'http://' + normalized;
+    }
+    // Remove trailing slash
+    return normalized.replace(/\/+$/, '');
+  },
+
+  async writePoint(config: InfluxConfig, line: string): Promise<{ success: boolean; error?: string }> {
+    if (!config.isEnabled) return { success: false, error: 'InfluxDB is disabled' };
     
-    const url = `${config.url}/api/v2/write?org=${config.org}&bucket=${config.bucket}&precision=s`;
+    const baseUrl = this.normalizeUrl(config.url);
+    if (!baseUrl) return { success: false, error: 'Invalid URL' };
+
+    const url = `${baseUrl}/api/v2/write?org=${encodeURIComponent(config.org)}&bucket=${encodeURIComponent(config.bucket)}&precision=${config.precision || 's'}`;
     
     try {
       const response = await fetch(url, {
@@ -18,30 +32,34 @@ export const influxService = {
       });
       
       if (!response.ok) {
-        console.error('InfluxDB write failed:', await response.text());
+        const text = await response.text();
+        console.error('InfluxDB write failed:', text);
+        return { success: false, error: `HTTP ${response.status}: ${text}` };
       }
+      return { success: true };
     } catch (error) {
       console.error('InfluxDB network error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
     }
   },
 
-  // Telemetry: charger,connector=C1 power=42.5,voltage=400,temp=38 timestamp
   async writeTelemetry(config: InfluxConfig, charger: EVCharger, connector: Connector) {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const line = `telemetry,charger_id=${charger.id},connector_id=${connector.id} ` +
+    const timestamp = Math.floor(Date.now() / (config.precision === 'ms' ? 1 : 1000));
+    const prefix = config.measurementPrefix || '';
+    const line = `${prefix}telemetry,charger_id=${charger.id},connector_id=${connector.id} ` +
                  `power_kw=${connector.currentPowerKW || 0},` +
                  `energy_kwh=${connector.currentKWh || 0},` +
                  `voltage_v=${connector.voltage || 0},` +
                  `temp_c=${connector.temperature || 0} ` +
                  `${timestamp}`;
     
-    await this.writePoint(config, line);
+    return await this.writePoint(config, line);
   },
 
-  // Transaction: transactions,station=S1,account=U1 energy=5.2,cost=6500 timestamp
   async writeTransaction(config: InfluxConfig, tx: EVTransaction) {
-    const timestamp = Math.floor(new Date(tx.endTime).getTime() / 1000);
-    const line = `transactions,station=${tx.station.replace(/ /g, '_')},` +
+    const timestamp = Math.floor(new Date(tx.endTime).getTime() / (config.precision === 'ms' ? 1 : 1000));
+    const prefix = config.measurementPrefix || '';
+    const line = `${prefix}transactions,station=${tx.station.replace(/ /g, '_')},` +
                  `account=${tx.account.replace(/ /g, '_')},` +
                  `connector=${tx.connector} ` +
                  `energy_kwh=${tx.meterKWh},` +
@@ -49,47 +67,31 @@ export const influxService = {
                  `duration_min=${tx.durationMinutes} ` +
                  `${timestamp}`;
     
-    await this.writePoint(config, line);
+    return await this.writePoint(config, line);
   },
 
-  // Metadata: metadata,type=user id="...",payload="{...}" timestamp
-  async writeMetadata(config: InfluxConfig, type: string, id: string, payload: any) {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const safePayload = JSON.stringify(payload).replace(/"/g, '\\"');
-    const line = `metadata,type=${type},id=${id} payload="${safePayload}" ${timestamp}`;
-    await this.writePoint(config, line);
-  },
-
-  async query(config: InfluxConfig, flux: string) {
-    if (!config.isEnabled || !config.url) return null;
-    
-    const url = `${config.url}/api/v2/query?org=${config.org}`;
+  async checkHealth(config: InfluxConfig): Promise<{ healthy: boolean; message: string }> {
+    const baseUrl = this.normalizeUrl(config.url);
+    if (!baseUrl) return { healthy: false, message: 'URL is required' };
     
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${config.token}`,
-          'Content-Type': 'application/vnd.flux',
-          'Accept': 'application/csv',
-        },
-        body: flux
-      });
-      
-      if (!response.ok) return null;
-      return await response.text();
+      const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        const data = await response.json();
+        return { healthy: true, message: `Connected (Status: ${data.status})` };
+      }
+      return { healthy: false, message: `Status: ${response.status}` };
     } catch (error) {
-      return null;
+      return { healthy: false, message: error instanceof Error ? error.message : 'Connection failed' };
     }
   },
 
-  async checkHealth(config: InfluxConfig): Promise<boolean> {
-    if (!config.url) return false;
-    try {
-      const response = await fetch(`${config.url}/health`);
-      return response.ok;
-    } catch {
-      return false;
+  async testWritePermissions(config: InfluxConfig): Promise<{ success: boolean; message: string }> {
+    const testPoint = `_test_connection,host=webapp status="ok" ${Math.floor(Date.now() / (config.precision === 'ms' ? 1 : 1000))}`;
+    const result = await this.writePoint(config, testPoint);
+    if (result.success) {
+      return { success: true, message: 'Write access verified' };
     }
+    return { success: false, message: result.error || 'Write failed' };
   }
 };
