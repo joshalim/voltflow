@@ -1,5 +1,5 @@
 
-# VoltFlow EV CMS - Ubuntu Installation Guide (Caddy Server)
+# VoltFlow EV CMS - Ubuntu Installation Guide
 
 This guide details the process for deploying the VoltFlow CMS on a local or cloud Ubuntu server using **Caddy** as the reverse proxy.
 
@@ -17,7 +17,7 @@ sudo apt-get install -y nodejs
 ## 3. Install InfluxDB v2
 ```bash
 wget -q https://repos.influxdata.com/influxdata-archive_compat.key
-echo '393e877294000125463f3f352291970e1b2b4043f7941fa51199c07212497f66 influxdata-archive_compat.key' | sha256sum -c && cat influxdata-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
+cat influxdata-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
 echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
 sudo apt-get update && sudo apt-get install influxdb2 -y
 sudo systemctl enable --now influxdb
@@ -32,75 +32,34 @@ npm run build
 ```
 
 ## 5. Process Management (PM2)
-We now use a dedicated `server.js` for stability.
+The application includes a built-in proxy in `server.js` to handle InfluxDB traffic safely.
 ```bash
 sudo npm install -g pm2
-# Ensure you ran npm run build first!
+# Build the frontend first
+npm run build
+# Start the production server
 pm2 start server.js --name "voltflow-cms"
 pm2 save
 pm2 startup
 ```
 
-## 6. Caddy Reverse Proxy
-Caddy will handle Port 80 traffic and forward it to the app on 3085.
+## 6. Networking & Proxy
+The app is now configured to use a proxy at `/influx-proxy`.
 
-### Install Caddy
+**Why use the proxy?**
+1. **No CORS errors**: The browser talks to port 3085, and the server handles the 8086 internal traffic.
+2. **Security**: You do not need to open Port 8086 on your firewall to the public internet.
+3. **Reliability**: The server uses `127.0.0.1` internally, avoiding external IP resolution issues.
+
+### Verification
+Test the proxy from the server:
 ```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-ring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy -y
+curl -I http://127.0.0.1:3085/influx-proxy/health
 ```
+*Expected: HTTP/1.1 200 OK (passed through from InfluxDB).*
 
-### Configure Caddyfile
-```bash
-sudo nano /etc/caddy/Caddyfile
-```
-
-**Content:**
-```caddy
-:80 {
-    reverse_proxy 127.0.0.1:3085
-    
-    # Enable compression
-    encode zstd gzip
-    
-    log {
-        output file /var/log/caddy/access.log
-    }
-}
-```
-
-Restart Caddy:
-```bash
-sudo systemctl restart caddy
-```
-
-## 7. Connectivity Troubleshooting
-
-### Step A: Verify PM2 Status
-```bash
-pm2 status
-pm2 logs voltflow-cms
-```
-*If status is 'errored', check the logs to see if port 3085 is already in use.*
-
-### Step B: Verify Local Connection
-```bash
-curl -I http://127.0.0.1:3085/health
-```
-*Expected: HTTP/1.1 200 OK. If this fails, the Node.js server is not running.*
-
-### Step C: Verify Network Binding
-```bash
-sudo ss -tulpn | grep 3085
-```
-*It must show `0.0.0.0:3085` or `*:3085`.*
-
-### Step D: Firewall Rules
-```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 3085/tcp
-sudo ufw status
-```
+## 7. Troubleshooting
+If InfluxDB still shows "Disconnected":
+1. Check if InfluxDB is running: `sudo systemctl status influxdb`
+2. Check PM2 logs: `pm2 logs voltflow-cms`
+3. Ensure the bucket `SMARTCHARGE` exists in the InfluxDB UI (`http://YOUR_SERVER_IP:8086`).

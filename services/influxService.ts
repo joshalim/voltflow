@@ -2,24 +2,30 @@
 import { InfluxConfig, EVTransaction, EVCharger, Connector } from '../types';
 
 export const influxService = {
-  normalizeUrl(url: string): string {
-    let normalized = url.trim();
-    if (!normalized) return '';
-    // Ensure protocol exists
-    if (!/^https?:\/\//i.test(normalized)) {
-      normalized = 'http://' + normalized;
+  /**
+   * For the browser to talk to the local InfluxDB on the server, 
+   * we use the relative /influx-proxy/ endpoint defined in server.js.
+   */
+  getProxyUrl(config: InfluxConfig, path: string): string {
+    // If the URL contains 'influx-proxy', use it as a relative path
+    if (config.url.includes('influx-proxy')) {
+      return `/influx-proxy${path}`;
     }
-    // Remove trailing slash
-    return normalized.replace(/\/+$/, '');
+    
+    // Otherwise, try to construct the URL directly (might hit CORS issues)
+    let baseUrl = config.url.trim().replace(/\/+$/, '');
+    if (!baseUrl) return `/influx-proxy${path}`;
+    
+    if (!/^https?:\/\//i.test(baseUrl)) {
+      baseUrl = 'http://' + baseUrl;
+    }
+    return `${baseUrl}${path}`;
   },
 
   async writePoint(config: InfluxConfig, line: string): Promise<{ success: boolean; error?: string }> {
     if (!config.isEnabled) return { success: false, error: 'InfluxDB is disabled' };
     
-    const baseUrl = this.normalizeUrl(config.url);
-    if (!baseUrl) return { success: false, error: 'Invalid URL' };
-
-    const url = `${baseUrl}/api/v2/write?org=${encodeURIComponent(config.org)}&bucket=${encodeURIComponent(config.bucket)}&precision=${config.precision || 's'}`;
+    const url = this.getProxyUrl(config, `/api/v2/write?org=${encodeURIComponent(config.org)}&bucket=${encodeURIComponent(config.bucket)}&precision=${config.precision || 's'}`);
     
     try {
       const response = await fetch(url, {
@@ -39,7 +45,7 @@ export const influxService = {
       return { success: true };
     } catch (error) {
       console.error('InfluxDB network error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+      return { success: false, error: error instanceof Error ? error.message : 'Network error (check if server.js proxy is active)' };
     }
   },
 
@@ -71,18 +77,17 @@ export const influxService = {
   },
 
   async checkHealth(config: InfluxConfig): Promise<{ healthy: boolean; message: string }> {
-    const baseUrl = this.normalizeUrl(config.url);
-    if (!baseUrl) return { healthy: false, message: 'URL is required' };
+    const url = this.getProxyUrl(config, '/health');
     
     try {
-      const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) });
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
         const data = await response.json();
         return { healthy: true, message: `Connected (Status: ${data.status})` };
       }
       return { healthy: false, message: `Status: ${response.status}` };
     } catch (error) {
-      return { healthy: false, message: error instanceof Error ? error.message : 'Connection failed' };
+      return { healthy: false, message: 'Connection failed via proxy. Check if InfluxDB is running on port 8086.' };
     }
   },
 
