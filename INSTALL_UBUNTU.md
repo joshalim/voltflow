@@ -32,11 +32,11 @@ npm run build
 ```
 
 ## 5. Process Management (PM2)
-Ensure the application binds to **0.0.0.0** so it can be reached by the reverse proxy.
+We now use a dedicated `server.js` for stability.
 ```bash
 sudo npm install -g pm2
-# Serve the production build on port 3085
-pm2 start npm --name "voltflow-cms" -- run preview
+# Ensure you ran npm run build first!
+pm2 start server.js --name "voltflow-cms"
 pm2 save
 pm2 startup
 ```
@@ -63,7 +63,7 @@ sudo nano /etc/caddy/Caddyfile
 :80 {
     reverse_proxy 127.0.0.1:3085
     
-    # Enable compression for faster loading
+    # Enable compression
     encode zstd gzip
     
     log {
@@ -72,44 +72,35 @@ sudo nano /etc/caddy/Caddyfile
 }
 ```
 
-Restart and check status:
+Restart Caddy:
 ```bash
 sudo systemctl restart caddy
-sudo systemctl status caddy
 ```
 
-## 7. Critical Connectivity Troubleshooting
+## 7. Connectivity Troubleshooting
 
-If you still cannot see the page:
+### Step A: Verify PM2 Status
+```bash
+pm2 status
+pm2 logs voltflow-cms
+```
+*If status is 'errored', check the logs to see if port 3085 is already in use.*
 
-### Step A: Verify the App is actually listening on 3085
+### Step B: Verify Local Connection
+```bash
+curl -I http://127.0.0.1:3085/health
+```
+*Expected: HTTP/1.1 200 OK. If this fails, the Node.js server is not running.*
+
+### Step C: Verify Network Binding
 ```bash
 sudo ss -tulpn | grep 3085
 ```
-**Expected Output:** `LISTEN 0 4096 0.0.0.0:3085` (If it says `127.0.0.1:3085`, external access and some proxy configs will fail).
+*It must show `0.0.0.0:3085` or `*:3085`.*
 
-### Step B: Test locally (on the server)
-```bash
-curl -I http://127.0.0.1:3085
-```
-If this returns `HTTP/1.1 200 OK`, the app is running fine.
-
-### Step C: Check Firewall (UFW)
+### Step D: Firewall Rules
 ```bash
 sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
 sudo ufw allow 3085/tcp
-sudo ufw reload
 sudo ufw status
 ```
-
-### Step D: Cloud Provider Security Groups
-If you are on **AWS, Azure, or DigitalOcean**, you MUST go to their web dashboard and allow **Inbound Traffic** for Port 80 and Port 3085. Local `ufw` rules are often overridden by these external firewalls.
-
-### Step E: Caddy Logs
-If you get a "502 Bad Gateway", check Caddy logs to see why it can't talk to the app:
-```bash
-sudo journalctl -u caddy --no-pager | tail -n 20
-```
-
-The CMS should now be visible at `http://YOUR_SERVER_IP`.
