@@ -127,7 +127,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
       const newUsers: Omit<User, 'id' | 'createdAt'>[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        // Simple CSV parse with quote handling
         const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/^"(.*)"$/, '$1').trim());
         
         const userObj: any = { status: 'ACTIVE' };
@@ -168,7 +167,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         <p className="text-slate-500 font-medium">{t('userManagementSubtitle')}</p>
       </header>
 
-      {/* Conditional Registration Section */}
       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm transition-all duration-300">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -256,7 +254,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </form>
       </div>
 
-      {/* User Directory Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -345,7 +342,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </div>
       </div>
 
-      {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl scale-in-center overflow-y-auto max-h-[90vh]">
@@ -359,21 +355,21 @@ const UserManagement: React.FC<UserManagementProps> = ({
             
             <form onSubmit={(e) => { e.preventDefault(); onUpdateUser(editingUser.id, editingUser); setEditingUser(null); }} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <FormGroup label={t('userName')} value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} icon={<UserIcon size={14} />} required />
-                <FormGroup label={t('userEmail')} value={editingUser.email} type="email" onChange={e => setEditingUser({...editingUser, email: e.target.value})} icon={<Mail size={14} />} required />
-                <FormGroup label={t('contactNumber')} value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} icon={<Phone size={14} />} required />
+                <FormGroup label={t('userName')} value={editingUser.name} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, name: ev.target.value})} icon={<UserIcon size={14} />} required />
+                <FormGroup label={t('userEmail')} value={editingUser.email} type="email" onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, email: ev.target.value})} icon={<Mail size={14} />} required />
+                <FormGroup label={t('contactNumber')} value={editingUser.phone} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, phone: ev.target.value})} icon={<Phone size={14} />} required />
                 
                 {editingUser.userType === 'PERSONAL' ? (
-                  <FormGroup label={t('cedula')} value={editingUser.cedula} onChange={e => setEditingUser({...editingUser, cedula: e.target.value})} icon={<Hash size={14} />} required />
+                  <FormGroup label={t('cedula')} value={editingUser.cedula} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, cedula: ev.target.value})} icon={<Hash size={14} />} required />
                 ) : (
                   <>
-                    <FormGroup label={t('nit')} value={editingUser.nit} onChange={e => setEditingUser({...editingUser, nit: e.target.value})} icon={<Building2 size={14} />} required />
-                    <FormGroup label={t('companyName')} value={editingUser.company} onChange={e => setEditingUser({...editingUser, company: e.target.value})} icon={<Building2 size={14} />} required />
+                    <FormGroup label={t('nit')} value={editingUser.nit} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, nit: ev.target.value})} icon={<Building2 size={14} />} required />
+                    <FormGroup label={t('companyName')} value={editingUser.company} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, company: ev.target.value})} icon={<Building2 size={14} />} required />
                   </>
                 )}
                 
-                <FormGroup label={t('rfidTagUid')} value={editingUser.rfidTag} onChange={e => setEditingUser({...editingUser, rfidTag: e.target.value})} icon={<Fingerprint size={14} />} isTag required />
-                <FormGroup label={t('placa')} value={editingUser.placa} onChange={e => setEditingUser({...editingUser, placa: e.target.value})} icon={<Car size={14} />} />
+                <FormGroup label={t('rfidTagUid')} value={editingUser.rfidTag} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, rfidTag: ev.target.value})} icon={<Fingerprint size={14} />} isTag required />
+                <FormGroup label={t('placa')} value={editingUser.placa} onChange={(ev: React.ChangeEvent<HTMLInputElement>) => setEditingUser({...editingUser, placa: ev.target.value})} icon={<Car size={14} />} />
               </div>
 
               <div className="flex gap-3 pt-6">

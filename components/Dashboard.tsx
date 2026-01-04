@@ -110,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, chargers 
                 <YAxis fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${formatCOP(v)}`} tick={{fill: '#94a3b8'}} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`$${formatCOP(value)}`, '']} 
+                  formatter={(value: any) => [`$${formatCOP(Number(value || 0))}`, '']} 
                 />
                 <Legend iconType="circle" />
                 <Area type="monotone" dataKey="revenue" name={t('totalRevenue')} stroke="#3b82f6" fillOpacity={1} fill="url(#colorRev)" strokeWidth={3} />
@@ -138,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, expenses, chargers 
                 <Pie data={paymentBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5}>
                   {paymentBreakdown.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(value: number) => [`$${formatCOP(value)}`, '']} />
+                <Tooltip formatter={(value: any) => [`$${formatCOP(Number(value || 0))}`, '']} />
               </PieChart>
             </ResponsiveContainer>
           </div>

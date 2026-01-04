@@ -133,10 +133,10 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ConfigField label={t('influxUrl')} value={influxConfig.url} onChange={v => onUpdateInfluxConfig({ url: v })} placeholder="http://localhost:8086" icon={<Link2 size={12}/>} />
-                  <ConfigField label={t('influxOrg')} value={influxConfig.org} onChange={v => onUpdateInfluxConfig({ org: v })} placeholder="my-org" icon={<Activity size={12}/>} />
-                  <ConfigField label={t('influxBucket')} value={influxConfig.bucket} onChange={v => onUpdateInfluxConfig({ bucket: v })} placeholder="voltflow" icon={<Database size={12}/>} />
-                  <ConfigField label={t('influxToken')} value={influxConfig.token} onChange={v => onUpdateInfluxConfig({ token: v })} placeholder="API Token" icon={<Key size={12}/>} type="password" />
+                  <ConfigField label={t('influxUrl')} value={influxConfig.url} onChange={(v: string) => onUpdateInfluxConfig({ url: v })} placeholder="http://localhost:8086" icon={<Link2 size={12}/>} />
+                  <ConfigField label={t('influxOrg')} value={influxConfig.org} onChange={(v: string) => onUpdateInfluxConfig({ org: v })} placeholder="my-org" icon={<Activity size={12}/>} />
+                  <ConfigField label={t('influxBucket')} value={influxConfig.bucket} onChange={(v: string) => onUpdateInfluxConfig({ bucket: v })} placeholder="voltflow" icon={<Database size={12}/>} />
+                  <ConfigField label={t('influxToken')} value={influxConfig.token} onChange={(v: string) => onUpdateInfluxConfig({ token: v })} placeholder="API Token" icon={<Key size={12}/>} type="password" />
                </div>
             </div>
           </div>
@@ -160,12 +160,12 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                </div>
 
                <div className="space-y-4">
-                  <ConfigField label={t('ocpiUrl')} value={ocpiConfig.baseUrl} onChange={v => onUpdateOcpiConfig({ baseUrl: v })} placeholder="https://api.roaming.com/ocpi/cpo" icon={<Link2 size={12}/>} />
+                  <ConfigField label={t('ocpiUrl')} value={ocpiConfig.baseUrl} onChange={(v: string) => onUpdateOcpiConfig({ baseUrl: v })} placeholder="https://api.roaming.com/ocpi/cpo" icon={<Link2 size={12}/>} />
                   <div className="grid grid-cols-2 gap-4">
-                    <ConfigField label={t('partyId')} value={ocpiConfig.partyId} onChange={v => onUpdateOcpiConfig({ partyId: v })} placeholder="VLT" icon={<Target size={12}/>} />
-                    <ConfigField label={t('countryCode')} value={ocpiConfig.countryCode} onChange={v => onUpdateOcpiConfig({ countryCode: v })} placeholder="CO" icon={<Globe size={12}/>} />
+                    <ConfigField label={t('partyId')} value={ocpiConfig.partyId} onChange={(v: string) => onUpdateOcpiConfig({ partyId: v })} placeholder="VLT" icon={<Target size={12}/>} />
+                    <ConfigField label={t('countryCode')} value={ocpiConfig.countryCode} onChange={(v: string) => onUpdateOcpiConfig({ countryCode: v })} placeholder="CO" icon={<Globe size={12}/>} />
                   </div>
-                  <ConfigField label={t('ocpiToken')} value={ocpiConfig.token} onChange={v => onUpdateOcpiConfig({ token: v })} placeholder="Client Token A" icon={<Key size={12}/>} type="password" />
+                  <ConfigField label={t('ocpiToken')} value={ocpiConfig.token} onChange={(v: string) => onUpdateOcpiConfig({ token: v })} placeholder="Client Token A" icon={<Key size={12}/>} type="password" />
                </div>
             </div>
           </div>
@@ -411,7 +411,14 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   );
 };
 
-const ConfigField = ({ label, value, onChange, placeholder, icon, type = "text" }: any) => (
+const ConfigField = ({ label, value, onChange, placeholder, icon, type = "text" }: { 
+  label: string; 
+  value: string; 
+  onChange: (val: string) => void; 
+  placeholder?: string; 
+  icon?: React.ReactNode; 
+  type?: string 
+}) => (
   <div className="space-y-1">
     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
       {icon} {label}

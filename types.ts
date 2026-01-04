@@ -7,6 +7,22 @@ export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 export type UserRole = 'ADMIN' | 'USER' | null;
 
+// Global declaration to fix aistudio and environment variable TS errors
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+
+  interface Window {
+    /**
+     * AIStudio property provided by the environment for API key selection.
+     * Note: Using AIStudio interface to match platform-defined type requirements.
+     */
+    readonly aistudio: AIStudio;
+  }
+}
+
 export interface ViewOnlyAccount {
   id: string;
   user: string;
