@@ -1,14 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus, InfluxConfig, UserRole } from '../types';
+import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus, UserRole } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { Terminal, Activity, Play, Square, Info, ShieldCheck, Zap, Server, Cpu, Radio, Power, Clock, Database, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import ConnectorIcon from './ConnectorIcon';
-import { influxService } from '../services/influxService';
 
 interface OcppMonitorProps {
   ocppConfig: OcppConfig;
-  influxConfig: InfluxConfig;
   lang: Language;
   role: UserRole;
   onNewTransaction: (tx: EVTransaction) => void;
@@ -20,7 +18,6 @@ interface OcppMonitorProps {
 
 const OcppMonitor: React.FC<OcppMonitorProps> = ({ 
   ocppConfig, 
-  influxConfig,
   lang, 
   role,
   onNewTransaction, 
@@ -100,7 +97,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
     await new Promise(r => setTimeout(r, 800));
     addLog('OUT', 'StartTransactionResponse', { transactionId: txId });
 
-    // 4. MeterValues Loop + InfluxDB Writes
+    // 4. MeterValues Loop
     for (let i = 1; i <= 4; i++) {
       await new Promise(r => setTimeout(r, 2000));
       const energy = (250 + (i * 1.5));
@@ -116,11 +113,6 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
       };
       
       syncHardwareStatus(charger.id, { connectors: liveConnectors });
-      
-      // PERSIST TELEMETRY TO INFLUXDB
-      if (influxConfig.isEnabled) {
-        await influxService.writeTelemetry(influxConfig, charger, liveConnectors[connectorIndex]);
-      }
     }
 
     // 5. StopTransaction
@@ -149,11 +141,6 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
       status: 'UNPAID',
       paymentType: 'N/A'
     };
-    
-    // PERSIST TRANSACTION TO INFLUXDB
-    if (influxConfig.isEnabled) {
-      await influxService.writeTransaction(influxConfig, transaction);
-    }
     
     onNewTransaction(transaction);
     setIsSimulating(false);
@@ -219,14 +206,6 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
                   <Clock size={12} /> {isAdmin ? 'Waiting for ID Tag...' : 'Standby'}
                 </div>
               )}
-
-              {/* Instant Meter visualization */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-50 rounded-b-3xl overflow-hidden">
-                <div 
-                  className="h-full bg-orange-500 transition-all duration-1000" 
-                  style={{ width: connector.status === 'CHARGING' ? `${(connector.currentPowerKW || 0) / connector.powerKW * 100}%` : '0%' }} 
-                />
-              </div>
             </div>
           )))}
         </div>
@@ -260,18 +239,6 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
                  <div ref={logEndRef} />
               </div>
            </div>
-
-           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                <ShieldCheck size={16} className="text-emerald-500" />
-                CMS System Integrity
-              </h3>
-              <div className="space-y-3">
-                 <IntegrityItem label="OCPP Protocol" value="1.6-J" />
-                 <IntegrityItem label="WebSocket" value="Encrypted" />
-                 <IntegrityItem label="Database" value={influxConfig.isEnabled ? 'InfluxDB v2' : 'Local'} />
-              </div>
-           </div>
         </div>
       </div>
     </div>
@@ -300,13 +267,6 @@ const LiveMetric = ({ label, value, icon }: any) => (
       {icon} <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
     </div>
     <p className="text-[10px] font-black text-slate-800">{value}</p>
-  </div>
-);
-
-const IntegrityItem = ({ label, value }: any) => (
-  <div className="flex justify-between items-center">
-    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-    <span className="text-[10px] font-black text-slate-700">{value}</span>
   </div>
 );
 

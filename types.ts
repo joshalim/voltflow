@@ -6,7 +6,6 @@ export type UserType = 'PERSONAL' | 'BUSINESS';
 export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 export type UserRole = 'ADMIN' | 'USER' | null;
-export type InfluxPrecision = 's' | 'ms' | 'us' | 'ns';
 
 declare global {
   namespace NodeJS {
@@ -34,6 +33,17 @@ export interface PostgresConfig {
   isEnabled: boolean;
 }
 
+// Added InfluxConfig interface to resolve import error in services/influxService.ts
+export interface InfluxConfig {
+  url: string;
+  token: string;
+  org: string;
+  bucket: string;
+  precision?: 's' | 'ms' | 'us' | 'ns';
+  measurementPrefix?: string;
+  isEnabled: boolean;
+}
+
 export interface ViewOnlyAccount {
   id: string;
   user: string;
@@ -44,16 +54,6 @@ export interface AuthConfig {
   adminUser: string;
   adminPass: string;
   viewOnlyAccounts: ViewOnlyAccount[];
-}
-
-export interface InfluxConfig {
-  url: string;
-  token: string;
-  org: string;
-  bucket: string;
-  measurementPrefix: string;
-  precision: InfluxPrecision;
-  isEnabled: boolean;
 }
 
 export interface OcpiConfig {

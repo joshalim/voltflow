@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -16,7 +16,6 @@ import ChargerManagement from './components/ChargerManagement';
 import Login from './components/Login';
 import SecuritySettings from './components/SecuritySettings';
 import { databaseService } from './services/databaseService';
-import { influxService } from './services/influxService';
 
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -26,7 +25,6 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [apiConfig, setApiConfig] = useState<ApiConfig>({ invoiceApiKey: '', invoiceApiUrl: '', isEnabled: false });
   const [ocppConfig, setOcppConfig] = useState<OcppConfig>({ centralSystemUrl: '', chargePointId: '', heartbeatInterval: 60, isListening: false });
-  const [influxConfig, setInfluxConfig] = useState<InfluxConfig>({ url: '', token: '', org: '', bucket: '', measurementPrefix: '', precision: 's', isEnabled: false });
   const [postgresConfig, setPostgresConfig] = useState<PostgresConfig>({ host: 'localhost', port: 5432, user: '', pass: '', database: '', ssl: false, isEnabled: false });
   const [ocpiConfig, setOcpiConfig] = useState<OcpiConfig>({ baseUrl: '', countryCode: '', isEnabled: false, partyId: '', token: '' });
   const [authConfig, setAuthConfig] = useState<AuthConfig>({ adminPass: '', adminUser: '', viewOnlyAccounts: [] });
@@ -38,7 +36,6 @@ const App: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
-  const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
   const [isPgConnected, setIsPgConnected] = useState<boolean | null>(null);
 
   const [startDate, setStartDate] = useState('');
@@ -59,7 +56,6 @@ const App: React.FC = () => {
       setExpenses(data.expenses);
       setApiConfig(data.apiConfig);
       setOcppConfig(data.ocppConfig);
-      setInfluxConfig(data.influxConfig);
       setPostgresConfig(data.postgresConfig);
       setOcpiConfig(data.ocpiConfig);
       setAuthConfig(data.authConfig);
@@ -77,31 +73,29 @@ const App: React.FC = () => {
       setIsSaving(true);
       await databaseService.save({
         transactions, pricingRules, accountGroups, expenses, 
-        apiConfig, ocppConfig, influxConfig, postgresConfig, 
+        apiConfig, ocppConfig, postgresConfig, 
         ocpiConfig, authConfig, users, chargers
       });
       setTimeout(() => setIsSaving(false), 500);
     };
     const timer = setTimeout(save, 2000);
     return () => clearTimeout(timer);
-  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, isInitialized]);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, isInitialized]);
 
   // Health Checks
   useEffect(() => {
     const checkHealthes = async () => {
-      if (influxConfig.isEnabled) {
-        const h = await influxService.checkHealth(influxConfig);
-        setIsDbConnected(h.healthy);
-      }
       if (postgresConfig.isEnabled) {
         const h = await databaseService.testPostgres(postgresConfig);
         setIsPgConnected(h.success);
+      } else {
+        setIsPgConnected(null);
       }
     };
     checkHealthes();
     const interval = setInterval(checkHealthes, 30000);
     return () => clearInterval(interval);
-  }, [influxConfig, postgresConfig]);
+  }, [postgresConfig]);
 
   const uniqueStations = useMemo(() => Array.from(new Set(transactions.map(tx => tx.station))), [transactions]);
   const uniqueAccounts = useMemo(() => Array.from(new Set(transactions.map(tx => tx.account))).sort(), [transactions]);
@@ -174,7 +168,6 @@ const App: React.FC = () => {
           <div className="space-y-2 px-2">
              <StatusIndicator active={isSaving} label="Sync" icon={<Save size={10} />} color={isSaving ? 'orange' : 'emerald'} />
              <StatusIndicator active={isPgConnected === true} label="SQL" icon={<Database size={10} />} color={isPgConnected ? 'blue' : 'rose'} />
-             <StatusIndicator active={isDbConnected === true} label="TSDB" icon={<Activity size={10} />} color={isDbConnected ? 'purple' : 'rose'} />
           </div>
           <button onClick={() => setCurrentUserRole(null)} className="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold hover:bg-rose-100 transition flex items-center justify-center gap-2">
             <LogOut size={18} /> {t('logout')}
@@ -189,11 +182,11 @@ const App: React.FC = () => {
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={expenses} role={currentUserRole} onAdd={(e) => setExpenses([...expenses, {...e, id: Date.now().toString()}])} onUpdate={(id, up) => setExpenses(expenses.map(e => e.id === id ? {...e, ...up} : e))} onDelete={(id) => setExpenses(expenses.filter(e => e.id !== id))} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} role={currentUserRole} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} influxConfig={influxConfig} lang={lang} role={currentUserRole} onNewTransaction={(t) => setTransactions([t, ...transactions])} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} role={currentUserRole} onNewTransaction={(t) => setTransactions([t, ...transactions])} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} />}
           {activeTab === 'chargers' && <ChargerManagement chargers={chargers} onAddCharger={(c) => setChargers([...chargers, {...c, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} onDeleteCharger={(id) => setChargers(chargers.filter(c => c.id !== id))} lang={lang} />}
           {activeTab === 'users' && <UserManagement users={users} onAddUser={(u) => setUsers([...users, {...u, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onImportUsers={(nu) => setUsers([...users, ...nu.map(u => ({...u, id: Math.random().toString(), createdAt: new Date().toISOString()}))])} onUpdateUser={(id, up) => setUsers(users.map(u => u.id === id ? {...u, ...up} : u))} onDeleteUser={(id) => setUsers(users.filter(u => u.id !== id))} lang={lang} />}
-          {activeTab === 'pricing' && <PricingSettings rules={pricingRules} groups={accountGroups} apiConfig={apiConfig} ocppConfig={ocppConfig} ocpiConfig={ocpiConfig} onAddRule={(r) => setPricingRules([...pricingRules, {...r, id: Date.now().toString()}])} onUpdateRule={(id, up) => setPricingRules(pricingRules.map(r => r.id === id ? {...r, ...up} : r))} onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} onAddGroup={(g) => setAccountGroups([...accountGroups, {...g, id: Date.now().toString()}])} onDeleteGroup={(id) => setAccountGroups(accountGroups.filter(g => g.id !== id))} onUpdateGroup={(id, up) => setAccountGroups(accountGroups.map(g => g.id === id ? {...g, ...up} : g))} onUpdateApiConfig={setApiConfig} onUpdateOcppConfig={setOcppConfig} onUpdateOcpiConfig={setOcpiConfig} onExportBackup={() => databaseService.exportBackup({ transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, lastUpdated: new Date().toISOString() })} onImportBackup={(f) => {}} lang={lang} />}
-          {activeTab === 'security' && <SecuritySettings authConfig={authConfig} influxConfig={influxConfig} postgresConfig={postgresConfig} onUpdateAuthConfig={setAuthConfig} onUpdateInfluxConfig={setInfluxConfig} onUpdatePostgresConfig={setPostgresConfig} lang={lang} role={currentUserRole} />}
+          {activeTab === 'pricing' && <PricingSettings rules={pricingRules} groups={accountGroups} apiConfig={apiConfig} ocppConfig={ocppConfig} ocpiConfig={ocpiConfig} onAddRule={(r) => setPricingRules([...pricingRules, {...r, id: Date.now().toString()}])} onUpdateRule={(id, up) => setPricingRules(pricingRules.map(r => r.id === id ? {...r, ...up} : r))} onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} onAddGroup={(g) => setAccountGroups([...accountGroups, {...g, id: Date.now().toString()}])} onDeleteGroup={(id) => setAccountGroups(accountGroups.filter(g => g.id !== id))} onUpdateGroup={(id, up) => setAccountGroups(accountGroups.map(g => g.id === id ? {...g, ...up} : g))} onUpdateApiConfig={setApiConfig} onUpdateOcppConfig={setOcppConfig} onUpdateOcpiConfig={setOcpiConfig} onExportBackup={() => databaseService.exportBackup({ transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, lastUpdated: new Date().toISOString() })} onImportBackup={(f) => {}} lang={lang} />}
+          {activeTab === 'security' && <SecuritySettings authConfig={authConfig} postgresConfig={postgresConfig} onUpdateAuthConfig={setAuthConfig} onUpdatePostgresConfig={setPostgresConfig} lang={lang} role={currentUserRole} />}
         </div>
       </main>
     </div>
