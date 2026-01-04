@@ -102,10 +102,8 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
     resetForm();
   };
 
-  // Simulated Remote Actions
   const handleRemoteReboot = async (chargerId: string) => {
     setActionLoading(`reboot-${chargerId}`);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     onUpdateCharger(chargerId, { status: 'ONLINE' });
     setActionLoading(null);
@@ -114,7 +112,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
 
   const handleRemoteUnlock = async (chargerId: string, connectorId: string) => {
     setActionLoading(`unlock-${connectorId}`);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const charger = chargers.find(c => c.id === chargerId);
@@ -127,6 +124,14 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
     
     setActionLoading(null);
     alert(`${t('unlock')} successful`);
+  };
+
+  const getConnectorColor = (type: string) => {
+    const t = type.toUpperCase();
+    if (t.includes('CCS')) return 'bg-orange-50 text-orange-600 border-orange-100';
+    if (t.includes('CHADEMO')) return 'bg-blue-50 text-blue-600 border-blue-100';
+    if (t.includes('GBT')) return 'bg-purple-50 text-purple-600 border-purple-100';
+    return 'bg-emerald-50 text-emerald-600 border-emerald-100';
   };
 
   return (
@@ -145,7 +150,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
         </button>
       </header>
 
-      {/* Grid of Chargers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {chargers.map(charger => (
           <div key={charger.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group transition-all hover:border-orange-200">
@@ -176,7 +180,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
                 </div>
               </div>
 
-              {/* Status Banner */}
               <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-2xl border border-slate-100">
                 <Radio size={14} className={charger.status === 'ONLINE' ? 'text-emerald-500' : 'text-slate-300'} />
                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{t('liveStatus')}</span>
@@ -185,12 +188,13 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
                 }`}>{charger.status}</span>
               </div>
 
-              {/* Connectors Status List */}
               <div className="space-y-2">
                 {charger.connectors.map(c => (
                   <div key={c.id} className="flex items-center justify-between bg-slate-50/50 border border-slate-100 p-3 rounded-2xl group/conn hover:bg-white transition-all">
                     <div className="flex items-center gap-3">
-                      <ConnectorIcon type={c.type} size={18} />
+                      <div className={`p-2 rounded-xl border ${getConnectorColor(c.type)}`}>
+                        <ConnectorIcon type={c.type} size={20} />
+                      </div>
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-black text-slate-700">{c.type}</span>
@@ -207,7 +211,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
                       </div>
                     </div>
                     
-                    {/* Unlock Button */}
                     {c.status !== 'AVAILABLE' && (
                       <button 
                         onClick={() => handleRemoteUnlock(charger.id, c.id)}
@@ -227,7 +230,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
               </div>
             </div>
 
-            {/* Quick Actions Footer */}
             <div className="mt-auto px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
               <button 
                 onClick={() => handleRemoteReboot(charger.id)}
@@ -250,7 +252,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
         )}
       </div>
 
-      {/* Add / Edit Modal */}
       {isAdding && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl scale-in-center overflow-hidden flex flex-col max-h-[90vh]">
@@ -346,11 +347,6 @@ const ChargerManagement: React.FC<ChargerManagementProps> = ({
                         </button>
                       </div>
                     ))}
-                    {connectors.length === 0 && (
-                      <div className="text-center py-6 border border-dashed border-slate-200 rounded-2xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">No connectors added yet.</p>
-                      </div>
-                    )}
                   </div>
                 </div>
 
