@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus } from '../types';
+import { OcppConfig, OcppLog, EVTransaction, Language, PricingRule, AccountGroup, EVCharger, ConnectorStatus, InfluxConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { Terminal, Activity, Play, Square, Info, ShieldCheck, Zap, Server, Cpu, Radio, Power, Clock, Database, RefreshCw, Smartphone, Monitor } from 'lucide-react';
 import ConnectorIcon from './ConnectorIcon';
+import { influxService } from '../services/influxService';
 
 interface OcppMonitorProps {
   ocppConfig: OcppConfig;
+  influxConfig: InfluxConfig;
   lang: Language;
   onNewTransaction: (tx: EVTransaction) => void;
   pricingRules: PricingRule[];
@@ -17,6 +19,7 @@ interface OcppMonitorProps {
 
 const OcppMonitor: React.FC<OcppMonitorProps> = ({ 
   ocppConfig, 
+  influxConfig,
   lang, 
   onNewTransaction, 
   pricingRules, 
@@ -84,11 +87,9 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
     const txId = `CMS-${Math.floor(Math.random() * 1000000)}`;
     const startTime = new Date();
     const connectorIndex = 0;
-    const connectorId = charger.connectors[connectorIndex]?.id || '1';
     
     addLog('IN', 'StartTransaction', { connectorId: 1, idTag: 'RFID_88_VIP', meterStart: 250, timestamp: startTime.toISOString() });
     
-    // Update live socket state
     const chargingConnectors = [...charger.connectors];
     chargingConnectors[connectorIndex] = { ...chargingConnectors[connectorIndex], status: 'CHARGING', currentPowerKW: 42.5, voltage: 400, temperature: 38 };
     syncHardwareStatus(charger.id, { connectors: chargingConnectors });
@@ -96,15 +97,27 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
     await new Promise(r => setTimeout(r, 800));
     addLog('OUT', 'StartTransactionResponse', { transactionId: txId });
 
-    // 4. MeterValues Loop
+    // 4. MeterValues Loop + InfluxDB Writes
     for (let i = 1; i <= 4; i++) {
       await new Promise(r => setTimeout(r, 2000));
       const energy = (250 + (i * 1.5));
       addLog('IN', 'MeterValues', { connectorId: 1, transactionId: txId, meterValue: [{ sampledValue: [{ value: energy.toString(), unit: 'Wh' }] }] });
       
       const liveConnectors = [...charger.connectors];
-      liveConnectors[connectorIndex] = { ...liveConnectors[connectorIndex], currentKWh: i * 1.5, currentPowerKW: 42.5 + (Math.random() * 2) };
+      liveConnectors[connectorIndex] = { 
+        ...liveConnectors[connectorIndex], 
+        currentKWh: i * 1.5, 
+        currentPowerKW: 42.5 + (Math.random() * 2),
+        voltage: 398 + Math.random() * 4,
+        temperature: 37 + i
+      };
+      
       syncHardwareStatus(charger.id, { connectors: liveConnectors });
+      
+      // PERSIST TELEMETRY TO INFLUXDB
+      if (influxConfig.isEnabled) {
+        await influxService.writeTelemetry(influxConfig, charger, liveConnectors[connectorIndex]);
+      }
     }
 
     // 5. StopTransaction
@@ -114,14 +127,12 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
     addLog('IN', 'StopTransaction', { transactionId: txId, idTag: 'RFID_88_VIP', meterStop: 256.0, timestamp: endTime.toISOString() });
     addLog('OUT', 'StopTransactionResponse', { idTagInfo: { status: 'Accepted' } });
 
-    // Finalize Socket
     const finalConnectors = [...charger.connectors];
     finalConnectors[connectorIndex] = { ...finalConnectors[connectorIndex], status: 'AVAILABLE', currentKWh: 0, currentPowerKW: 0 };
     syncHardwareStatus(charger.id, { connectors: finalConnectors });
 
-    // Save to global history
     const rate = getAppliedRate('RFID_88_VIP', charger.connectors[0]?.type || 'CCS2');
-    onNewTransaction({
+    const transaction: EVTransaction = {
       id: txId,
       station: charger.name,
       connector: charger.connectors[0]?.type || 'CCS2',
@@ -134,7 +145,14 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
       appliedRate: rate,
       status: 'UNPAID',
       paymentType: 'N/A'
-    });
+    };
+    
+    // PERSIST TRANSACTION TO INFLUXDB
+    if (influxConfig.isEnabled) {
+      await influxService.writeTransaction(influxConfig, transaction);
+    }
+    
+    onNewTransaction(transaction);
     setIsSimulating(false);
   };
 
@@ -234,7 +252,6 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
                      </pre>
                    </div>
                  ))}
-                 {logs.length === 0 && <p className="text-slate-700 italic">No communication logs recorded.</p>}
                  <div ref={logEndRef} />
               </div>
            </div>
@@ -247,7 +264,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
               <div className="space-y-3">
                  <IntegrityItem label="OCPP Protocol" value="1.6-J" />
                  <IntegrityItem label="WebSocket" value="Encrypted" />
-                 <IntegrityItem label="Persistence" value="IndexedDB" />
+                 <IntegrityItem label="Database" value={influxConfig.isEnabled ? 'InfluxDB v2' : 'Local'} />
               </div>
            </div>
         </div>

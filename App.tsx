@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>(initialDb.expenses);
   const [apiConfig, setApiConfig] = useState<ApiConfig>(initialDb.apiConfig);
   const [ocppConfig, setOcppConfig] = useState<OcppConfig>(initialDb.ocppConfig);
+  const [influxConfig, setInfluxConfig] = useState<InfluxConfig>(initialDb.influxConfig);
   const [users, setUsers] = useState<User[]>(initialDb.users || []);
   const [chargers, setChargers] = useState<EVCharger[]>(initialDb.chargers || []);
   
@@ -49,12 +50,13 @@ const App: React.FC = () => {
       expenses,
       apiConfig,
       ocppConfig,
+      influxConfig,
       users,
       chargers
     });
     const timer = setTimeout(() => setIsSaving(false), 800);
     return () => clearTimeout(timer);
-  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, users, chargers]);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, users, chargers]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -154,6 +156,7 @@ const App: React.FC = () => {
       setExpenses(restored.expenses);
       setApiConfig(restored.apiConfig);
       setOcppConfig(restored.ocppConfig);
+      setInfluxConfig(restored.influxConfig);
       setUsers(restored.users || []);
       setChargers(restored.chargers || []);
       alert('Database restored successfully.');
@@ -321,7 +324,7 @@ const App: React.FC = () => {
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} influxConfig={influxConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={handleUpdateCharger} />}
           {activeTab === 'chargers' && (
             <ChargerManagement 
               chargers={chargers}
@@ -347,6 +350,7 @@ const App: React.FC = () => {
               groups={accountGroups}
               apiConfig={apiConfig}
               ocppConfig={ocppConfig}
+              influxConfig={influxConfig}
               onAddRule={(r) => setPricingRules([...pricingRules, { ...r, id: Date.now().toString() }])} 
               onUpdateRule={handleUpdatePricingRule}
               onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} 
@@ -358,6 +362,7 @@ const App: React.FC = () => {
               onUpdateGroup={(id, updates) => setAccountGroups(accountGroups.map(g => g.id === id ? { ...g, ...updates } : g))}
               onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
               onUpdateOcppConfig={(updates) => setOcppConfig({ ...ocppConfig, ...updates })}
+              onUpdateInfluxConfig={(updates) => setInfluxConfig({ ...influxConfig, ...updates })}
               onExportBackup={() => databaseService.exportBackup()}
               onImportBackup={handleImportBackup}
               lang={lang} 

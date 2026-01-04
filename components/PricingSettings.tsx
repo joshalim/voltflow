@@ -1,14 +1,16 @@
 
-import React, { useState } from 'react';
-import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig } from '../types';
+import React, { useState, useEffect } from 'react';
+import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, InfluxConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson, Activity } from 'lucide-react';
+import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson, Activity, Server, Radio } from 'lucide-react';
+import { influxService } from '../services/influxService';
 
 interface PricingSettingsProps {
   rules: PricingRule[];
   groups: AccountGroup[];
   apiConfig: ApiConfig;
   ocppConfig: OcppConfig;
+  influxConfig: InfluxConfig;
   onAddRule: (rule: Omit<PricingRule, 'id'>) => void;
   onUpdateRule: (id: string, rule: Partial<PricingRule>) => void;
   onDeleteRule: (id: string) => void;
@@ -17,6 +19,7 @@ interface PricingSettingsProps {
   onDeleteGroup: (id: string) => void;
   onUpdateApiConfig: (config: Partial<ApiConfig>) => void;
   onUpdateOcppConfig: (config: Partial<OcppConfig>) => void;
+  onUpdateInfluxConfig: (config: Partial<InfluxConfig>) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
   lang: Language;
@@ -27,17 +30,20 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   groups, 
   apiConfig,
   ocppConfig,
+  influxConfig,
   onAddRule, 
   onDeleteRule, 
   onAddGroup,
   onDeleteGroup,
   onUpdateApiConfig,
   onUpdateOcppConfig,
+  onUpdateInfluxConfig,
   onExportBackup,
   onImportBackup,
   lang 
 }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const [isInfluxHealthy, setIsInfluxHealthy] = useState<boolean | null>(null);
   
   const [targetType, setTargetType] = useState<'ACCOUNT' | 'GROUP' | 'DEFAULT'>('ACCOUNT');
   const [targetId, setTargetId] = useState('');
@@ -46,6 +52,12 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
   const [groupName, setGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState('');
+
+  useEffect(() => {
+    if (influxConfig.url) {
+      influxService.checkHealth(influxConfig).then(setIsInfluxHealthy);
+    }
+  }, [influxConfig.url]);
 
   const handleAddRule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +95,41 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
-          {/* OCPP Integration Section */}
+          {/* InfluxDB v2 Settings */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <Database size={20} className="text-purple-500" />
+                {t('influxDbSettings')}
+              </h3>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isInfluxHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {isInfluxHealthy ? t('connected') : t('disconnected')}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <div className="flex items-center justify-between mb-2">
+                 <span className="text-sm font-bold text-slate-700">{t('enableIntegration')}</span>
+                 <button 
+                  onClick={() => onUpdateInfluxConfig({ isEnabled: !influxConfig.isEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${influxConfig.isEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}
+                 >
+                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${influxConfig.isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                 </button>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ConfigField label={t('influxUrl')} value={influxConfig.url} onChange={v => onUpdateInfluxConfig({ url: v })} placeholder="http://localhost:8086" icon={<Link2 size={12}/>} />
+                  <ConfigField label={t('influxOrg')} value={influxConfig.org} onChange={v => onUpdateInfluxConfig({ org: v })} placeholder="my-org" icon={<Activity size={12}/>} />
+                  <ConfigField label={t('influxBucket')} value={influxConfig.bucket} onChange={v => onUpdateInfluxConfig({ bucket: v })} placeholder="voltflow" icon={<Database size={12}/>} />
+                  <ConfigField label={t('influxToken')} value={influxConfig.token} onChange={v => onUpdateInfluxConfig({ token: v })} placeholder="API Token" icon={<Key size={12}/>} type="password" />
+               </div>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Activity size={20} className="text-orange-500" />
@@ -170,38 +216,6 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
-              <Database size={20} className="text-emerald-500" />
-              Database Management
-            </h3>
-
-            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-               <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                 All your transactions, pricing rules, and expenses are automatically saved to your browser's persistent storage. Download a backup to secure your data externally.
-               </p>
-               <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={onExportBackup}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100 transition shadow-sm"
-                  >
-                    <Download size={16} />
-                    Export JSON
-                  </button>
-                  <label className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100 transition shadow-sm cursor-pointer">
-                    <FileJson size={16} />
-                    Import JSON
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".json" 
-                      onChange={(e) => e.target.files?.[0] && onImportBackup(e.target.files[0])} 
-                    />
-                  </label>
-               </div>
             </div>
           </div>
         </div>
@@ -354,22 +368,23 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
           </div>
         </div>
       </div>
-      
-      <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl flex gap-4">
-        <div className="bg-blue-500 p-2 rounded-xl text-white h-fit"><Info size={24} /></div>
-        <div className="space-y-1">
-          <h4 className="font-black text-blue-900">{t('howPricingCalculated')}</h4>
-          <p className="text-xs text-blue-700 leading-relaxed">
-            When a transaction is imported, VoltFlow looks for a match in this order: 
-            <br />
-            <strong>1. Specific Account Rules</strong> → 
-            <strong>2. Account Group Rules</strong> → 
-            <strong>3. Global Default.</strong>
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
+
+const ConfigField = ({ label, value, onChange, placeholder, icon, type = "text" }: any) => (
+  <div className="space-y-1">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+      {icon} {label}
+    </label>
+    <input 
+      type={type} 
+      value={value} 
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-purple-500"
+    />
+  </div>
+);
 
 export default PricingSettings;

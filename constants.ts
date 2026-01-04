@@ -136,6 +136,14 @@ export const TRANSLATIONS: Translations = {
   liveOccupancy: { en: 'Live Occupancy', es: 'Ocupación en Vivo' },
   activeEnergy: { en: 'Energy Intensity', es: 'Intensidad Energética' },
   networkHealth: { en: 'Network Health', es: 'Salud de la Red' },
+  influxDbSettings: { en: 'InfluxDB v2 Settings', es: 'Ajustes InfluxDB v2' },
+  influxUrl: { en: 'InfluxDB URL', es: 'URL InfluxDB' },
+  influxToken: { en: 'API Token', es: 'Token API' },
+  influxOrg: { en: 'Organization', es: 'Organización' },
+  influxBucket: { en: 'Bucket Name', es: 'Nombre de Bucket' },
+  influxStatus: { en: 'TSDB Status', es: 'Estado TSDB' },
+  connected: { en: 'Connected', es: 'Conectado' },
+  disconnected: { en: 'Disconnected', es: 'Desconectado' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

@@ -6,13 +6,21 @@ export type UserType = 'PERSONAL' | 'BUSINESS';
 export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE' | 'FINISHING';
 
+export interface InfluxConfig {
+  url: string;
+  token: string;
+  org: string;
+  bucket: string;
+  isEnabled: boolean;
+}
+
 export interface Connector {
   id: string;
   type: string;
   powerKW: number;
   status: ConnectorStatus;
-  currentKWh?: number; // Live session data
-  currentPowerKW?: number; // Instantaneous draw
+  currentKWh?: number;
+  currentPowerKW?: number;
   voltage?: number;
   temperature?: number;
 }
@@ -30,7 +38,6 @@ export interface EVCharger {
   vendor?: string;
 }
 
-// Added User interface to resolve import errors in multiple files
 export interface User {
   id: string;
   name: string;
