@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, InfluxConfig, OcpiConfig, InfluxPrecision } from '../types';
 import { TRANSLATIONS } from '../constants';
-// Fix: Added Clock to the imported icons from lucide-react to resolve "Cannot find name 'Clock'" error
-import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, Activity, Network, CheckCircle2, AlertTriangle, RefreshCw, Clock } from 'lucide-react';
+// Fix: Added Zap and DollarSign to the imported icons from lucide-react to resolve "Cannot find name" errors
+import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, Activity, Network, CheckCircle2, AlertTriangle, RefreshCw, Clock, Zap, DollarSign } from 'lucide-react';
 import { influxService } from '../services/influxService';
 
 interface PricingSettingsProps {

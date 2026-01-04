@@ -26,8 +26,8 @@ declare global {
     /**
      * AIStudio property provided by the environment for API key selection.
      */
-    // Fix: Added readonly modifier to match ambient declarations in the environment
-    readonly aistudio: AIStudio;
+    // Fix: Removed readonly modifier to resolve modifier mismatch error with global Window interface
+    aistudio: AIStudio;
   }
 }
 
