@@ -63,7 +63,7 @@ npm run build
 Use PM2 to keep the application running in the background.
 ```bash
 sudo npm install -g pm2
-pm2 start npm --name "voltflow-cms" -- run preview -- --port 5000 --host
+pm2 start npm --name "voltflow-cms" -- run preview -- --port 3080 --host
 pm2 save
 pm2 startup
 ```
@@ -82,7 +82,7 @@ server {
     server_name voltflow.local;
 
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:3080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
