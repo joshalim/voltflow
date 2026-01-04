@@ -9,13 +9,15 @@ export default defineConfig({
   },
   server: {
     port: 3085,
-    host: '0.0.0.0', // Explicitly bind to all interfaces
-    strictPort: true
+    host: '0.0.0.0', // Listen on all network interfaces
+    strictPort: true,
+    cors: true
   },
   preview: {
     port: 3085,
-    host: '0.0.0.0',
-    strictPort: true
+    host: '0.0.0.0', // Ensure preview mode also binds to 0.0.0.0
+    strictPort: true,
+    cors: true
   },
   build: {
     outDir: 'dist',
