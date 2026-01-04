@@ -1,65 +1,69 @@
 
-# VoltFlow EV CMS - Ubuntu Installation Guide
-
-This guide details the process for deploying the VoltFlow CMS on a local or cloud Ubuntu server using **Caddy** as the reverse proxy.
+# VoltFlow EV CMS - Ubuntu Enterprise Installation
 
 ## 1. System Preparation
 ```bash
 sudo apt update && sudo apt upgrade -y
 ```
 
-## 2. Install Node.js & Dependencies
+## 2. Install PostgreSQL
+```bash
+sudo apt install postgresql postgresql-contrib -y
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+# Create Database and User
+sudo -u postgres psql -c "CREATE DATABASE voltflow;"
+sudo -u postgres psql -c "CREATE USER voltadmin WITH PASSWORD 'vlt_pass_2025';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE voltflow TO voltadmin;"
+```
+
+## 3. Install Node.js & Node-Postgres
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+sudo apt install -y nodejs
 ```
 
-## 3. Install InfluxDB v2
-```bash
-wget -q https://repos.influxdata.com/influxdata-archive_compat.key
-cat influxdata-archive_compat.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
-echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | sudo tee /etc/apt/sources.list.d/influxdata.list
-sudo apt-get update && sudo apt-get install influxdb2 -y
-sudo systemctl enable --now influxdb
-```
-
-## 4. Application Deployment
+## 4. Deploy Application
 ```bash
 git clone https://github.com/your-repo/voltflow.git
 cd voltflow
-npm install
+
+# Install pg driver explicitly for backend
+npm install pg
 npm run build
 ```
 
-## 5. Process Management (PM2)
-The application includes a built-in proxy in `server.js` to handle InfluxDB traffic safely.
+## 5. Process Management
 ```bash
 sudo npm install -g pm2
-# Build the frontend first
-npm run build
-# Start the production server
 pm2 start server.js --name "voltflow-cms"
 pm2 save
 pm2 startup
 ```
 
-## 6. Networking & Proxy
-The app is now configured to use a proxy at `/influx-proxy`.
+## 6. Accessing the UI
+1. Open `http://YOUR_SERVER_IP:3085`
+2. Go to **Security** tab.
+3. Configure PostgreSQL:
+   - **Host**: `localhost`
+   - **User**: `voltadmin`
+   - **Password**: `vlt_pass_2025`
+   - **Database**: `voltflow`
+4. Click **Verify Database Handshake**.
+5. Enable **Primary Storage** and click Save.
 
-**Why use the proxy?**
-1. **No CORS errors**: The browser talks to port 3085, and the server handles the 8086 internal traffic.
-2. **Security**: You do not need to open Port 8086 on your firewall to the public internet.
-3. **Reliability**: The server uses `127.0.0.1` internally, avoiding external IP resolution issues.
-
-### Verification
-Test the proxy from the server:
+## 7. Security (Optional)
+Install Caddy for SSL:
 ```bash
-curl -I http://127.0.0.1:3085/influx-proxy/health
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
 ```
-*Expected: HTTP/1.1 200 OK (passed through from InfluxDB).*
-
-## 7. Troubleshooting
-If InfluxDB still shows "Disconnected":
-1. Check if InfluxDB is running: `sudo systemctl status influxdb`
-2. Check PM2 logs: `pm2 logs voltflow-cms`
-3. Ensure the bucket `SMARTCHARGE` exists in the InfluxDB UI (`http://YOUR_SERVER_IP:8086`).
+Edit `/etc/caddy/Caddyfile`:
+```
+yourdomain.com {
+    reverse_proxy localhost:3085
+}
+```

@@ -3,67 +3,136 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import pkg from 'pg';
+const { Pool } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(express.json({ limit: '50mb' }));
+
 const PORT = 3085;
 const HOST = '0.0.0.0';
 
-// InfluxDB Proxy Configuration
-const INFLUX_HOST = '127.0.0.1';
-const INFLUX_PORT = 8086;
+let pgPool = null;
 
-// Serve static files from the 'dist' directory
-app.use(express.static(path.join(__dirname, 'dist')));
+// Initialize Postgres Schema
+const initDbSchema = async (pool) => {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_data (
+        id SERIAL PRIMARY KEY,
+        key TEXT UNIQUE,
+        data JSONB,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Postgres schema verified.');
+  } finally {
+    client.release();
+  }
+};
 
-/**
- * InfluxDB Proxy Middleware
- * Forwards frontend requests to the local InfluxDB instance.
- * This solves CORS and "localhost" resolution issues from the browser.
- */
+// Handle Postgres Config Updates
+const setupPgPool = (config) => {
+  if (pgPool) pgPool.end();
+  
+  pgPool = new Pool({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.pass,
+    database: config.database,
+    ssl: config.ssl ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: 5000,
+  });
+
+  return pgPool;
+};
+
+// API: Test Postgres Connection
+app.post('/api/db/test', async (req, res) => {
+  const config = req.body;
+  const testPool = new Pool({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.pass,
+    database: config.database,
+    ssl: config.ssl ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: 5000,
+  });
+
+  try {
+    const client = await testPool.connect();
+    await client.query('SELECT NOW()');
+    client.release();
+    await testPool.end();
+    res.json({ success: true, message: 'Connection Successful' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// API: Load Data
+app.get('/api/db/load', async (req, res) => {
+  if (!pgPool) return res.status(400).json({ error: 'Postgres not configured' });
+  try {
+    const result = await pgPool.query("SELECT data FROM app_data WHERE key = 'voltflow_global_state'");
+    if (result.rows.length > 0) {
+      res.json(result.rows[0].data);
+    } else {
+      res.json(null);
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Save Data
+app.post('/api/db/save', async (req, res) => {
+  if (!pgPool) {
+    // Attempt auto-setup if we have config in the request
+    if (req.body.postgresConfig) setupPgPool(req.body.postgresConfig);
+    else return res.status(400).json({ error: 'Postgres not configured' });
+  }
+  
+  try {
+    const data = req.body;
+    await pgPool.query(`
+      INSERT INTO app_data (key, data, updated_at)
+      VALUES ('voltflow_global_state', $1, CURRENT_TIMESTAMP)
+      ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = CURRENT_TIMESTAMP
+    `, [data]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// InfluxDB Proxy Middleware
 app.all('/influx-proxy/*', (req, res) => {
   const targetPath = req.url.replace('/influx-proxy', '');
-  
   const options = {
-    hostname: INFLUX_HOST,
-    port: INFLUX_PORT,
+    hostname: '127.0.0.1',
+    port: 8086,
     path: targetPath,
     method: req.method,
-    headers: {
-      ...req.headers,
-      host: `${INFLUX_HOST}:${INFLUX_PORT}`
-    }
+    headers: { ...req.headers, host: '127.0.0.1:8086' }
   };
-
   const proxyReq = http.request(options, (proxyRes) => {
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
     proxyRes.pipe(res, { end: true });
   });
-
   req.pipe(proxyReq, { end: true });
-
-  proxyReq.on('error', (e) => {
-    console.error(`InfluxDB Proxy Error: ${e.message}`);
-    res.status(502).send('InfluxDB is not reachable on the server.');
-  });
+  proxyReq.on('error', (e) => res.status(502).send('InfluxDB Unreachable'));
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
-// Always serve index.html for any request to handle React Router (SPA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+app.use(express.static(path.join(__dirname, 'dist')));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
 app.listen(PORT, HOST, () => {
-  console.log(`-----------------------------------------------`);
-  console.log(`VoltFlow CMS is running on http://${HOST}:${PORT}`);
-  console.log(`InfluxDB Proxy active: /influx-proxy -> http://${INFLUX_HOST}:${INFLUX_PORT}`);
-  console.log(`Serving files from: ${path.join(__dirname, 'dist')}`);
-  console.log(`-----------------------------------------------`);
+  console.log(`VoltFlow CMS @ http://${HOST}:${PORT}`);
 });

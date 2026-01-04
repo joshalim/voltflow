@@ -8,7 +8,6 @@ export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' 
 export type UserRole = 'ADMIN' | 'USER' | null;
 export type InfluxPrecision = 's' | 'ms' | 'us' | 'ns';
 
-// Global declaration to fix aistudio and environment variable TS errors
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -16,19 +15,23 @@ declare global {
       [key: string]: string | undefined;
     }
   }
-
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   }
-
   interface Window {
-    /**
-     * AIStudio property provided by the environment for API key selection.
-     */
-    // Fix: Made aistudio optional to match platform-provided declarations and fix "identical modifiers" error.
     aistudio?: AIStudio;
   }
+}
+
+export interface PostgresConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  database: string;
+  ssl: boolean;
+  isEnabled: boolean;
 }
 
 export interface ViewOnlyAccount {
