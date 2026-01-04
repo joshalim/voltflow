@@ -168,6 +168,11 @@ export const TRANSLATIONS: Translations = {
   technicalSpecs: { en: 'Technical Metrics', es: 'Métricas Técnicas' },
   avail: { en: 'Avail.', es: 'Disp.' },
   busy: { en: 'Busy', es: 'Ocup.' },
+  ocpiIntegration: { en: 'OCPI 2.2.1 Roaming', es: 'Roaming OCPI 2.2.1' },
+  partyId: { en: 'Party ID', es: 'ID de Parte' },
+  countryCode: { en: 'Country Code', es: 'Código de País' },
+  ocpiUrl: { en: 'OCPI Base URL', es: 'URL Base OCPI' },
+  ocpiToken: { en: 'Client Token (Token A)', es: 'Token de Cliente (Token A)' },
 };
 
 export const MOCK_DATA: EVTransaction[] = [];

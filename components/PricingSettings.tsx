@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, InfluxConfig } from '../types';
+import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, InfluxConfig, OcpiConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson, Activity, Server, Radio } from 'lucide-react';
+import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson, Activity, Server, Radio, Network, Save, Cloud } from 'lucide-react';
 import { influxService } from '../services/influxService';
 
 interface PricingSettingsProps {
@@ -11,6 +11,7 @@ interface PricingSettingsProps {
   apiConfig: ApiConfig;
   ocppConfig: OcppConfig;
   influxConfig: InfluxConfig;
+  ocpiConfig: OcpiConfig;
   onAddRule: (rule: Omit<PricingRule, 'id'>) => void;
   onUpdateRule: (id: string, rule: Partial<PricingRule>) => void;
   onDeleteRule: (id: string) => void;
@@ -20,6 +21,7 @@ interface PricingSettingsProps {
   onUpdateApiConfig: (config: Partial<ApiConfig>) => void;
   onUpdateOcppConfig: (config: Partial<OcppConfig>) => void;
   onUpdateInfluxConfig: (config: Partial<InfluxConfig>) => void;
+  onUpdateOcpiConfig: (config: Partial<OcpiConfig>) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
   lang: Language;
@@ -31,6 +33,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   apiConfig,
   ocppConfig,
   influxConfig,
+  ocpiConfig,
   onAddRule, 
   onDeleteRule, 
   onAddGroup,
@@ -38,6 +41,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   onUpdateApiConfig,
   onUpdateOcppConfig,
   onUpdateInfluxConfig,
+  onUpdateOcpiConfig,
   onExportBackup,
   onImportBackup,
   lang 
@@ -88,9 +92,16 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
-      <header>
-        <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('pricingRules')}</h2>
-        <p className="text-slate-500 font-medium">{t('pricingRulesSubtitle')}</p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{t('pricingRules')}</h2>
+          <p className="text-slate-500 font-medium">{t('pricingRulesSubtitle')}</p>
+        </div>
+        <div className="flex gap-2">
+           <button onClick={onExportBackup} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition">
+             <Download size={14} /> {t('exportPdf').replace('PDF', 'JSON')}
+           </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -130,38 +141,31 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             </div>
           </div>
 
+          {/* OCPI Roaming Settings */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
-              <Activity size={20} className="text-orange-500" />
-              {t('ocppIntegration')}
+              <Network size={20} className="text-emerald-500" />
+              {t('ocpiIntegration')}
             </h3>
 
             <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <div className="flex items-center justify-between mb-2">
+                 <span className="text-sm font-bold text-slate-700">{t('enableIntegration')}</span>
+                 <button 
+                  onClick={() => onUpdateOcpiConfig({ isEnabled: !ocpiConfig.isEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${ocpiConfig.isEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                 >
+                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${ocpiConfig.isEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                 </button>
+               </div>
+
                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                      <Link2 size={10} /> {t('apiUrl')}
-                    </label>
-                    <input 
-                      type="text" 
-                      value={ocppConfig.centralSystemUrl} 
-                      onChange={e => onUpdateOcppConfig({ centralSystemUrl: e.target.value })}
-                      placeholder="ws://your-server.com/ocpp"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
-                    />
+                  <ConfigField label={t('ocpiUrl')} value={ocpiConfig.baseUrl} onChange={v => onUpdateOcpiConfig({ baseUrl: v })} placeholder="https://api.roaming.com/ocpi/cpo" icon={<Link2 size={12}/>} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <ConfigField label={t('partyId')} value={ocpiConfig.partyId} onChange={v => onUpdateOcpiConfig({ partyId: v })} placeholder="VLT" icon={<Target size={12}/>} />
+                    <ConfigField label={t('countryCode')} value={ocpiConfig.countryCode} onChange={v => onUpdateOcpiConfig({ countryCode: v })} placeholder="CO" icon={<Globe size={12}/>} />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
-                      <Target size={10} /> {t('stationId')}
-                    </label>
-                    <input 
-                      type="text" 
-                      value={ocppConfig.chargePointId} 
-                      onChange={e => onUpdateOcppConfig({ chargePointId: e.target.value })}
-                      placeholder="CP001"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
+                  <ConfigField label={t('ocpiToken')} value={ocpiConfig.token} onChange={v => onUpdateOcpiConfig({ token: v })} placeholder="Client Token A" icon={<Key size={12}/>} type="password" />
                </div>
             </div>
           </div>
@@ -317,7 +321,42 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             </div>
           </div>
 
-          {/* API Integration Section */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+              <Activity size={20} className="text-orange-500" />
+              {t('ocppIntegration')}
+            </h3>
+
+            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Link2 size={10} /> {t('apiUrl')}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={ocppConfig.centralSystemUrl} 
+                      onChange={e => onUpdateOcppConfig({ centralSystemUrl: e.target.value })}
+                      placeholder="ws://your-server.com/ocpp"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Target size={10} /> {t('stationId')}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={ocppConfig.chargePointId} 
+                      onChange={e => onUpdateOcppConfig({ chargePointId: e.target.value })}
+                      placeholder="CP001"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+               </div>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Globe size={20} className="text-blue-500" />
@@ -382,7 +421,7 @@ const ConfigField = ({ label, value, onChange, placeholder, icon, type = "text" 
       value={value} 
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-purple-500"
+      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-orange-500"
     />
   </div>
 );

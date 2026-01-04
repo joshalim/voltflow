@@ -1,7 +1,7 @@
 
-import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig } from '../types';
+import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, OcpiConfig } from '../types';
 
-const STORAGE_KEY = 'voltflow_db_v8';
+const STORAGE_KEY = 'voltflow_db_v9';
 
 export interface AppDatabase {
   transactions: EVTransaction[];
@@ -11,6 +11,7 @@ export interface AppDatabase {
   apiConfig: ApiConfig;
   ocppConfig: OcppConfig;
   influxConfig: InfluxConfig;
+  ocpiConfig: OcpiConfig;
   authConfig: AuthConfig;
   users: User[];
   chargers: EVCharger[];
@@ -25,6 +26,7 @@ const DEFAULT_DB: AppDatabase = {
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
   ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
   influxConfig: { url: '', token: '', org: '', bucket: '', isEnabled: false },
+  ocpiConfig: { baseUrl: '', token: '', partyId: 'VLT', countryCode: 'CO', isEnabled: false },
   authConfig: {
     adminUser: 'smartcharge',
     adminPass: 'qazwsx!',
@@ -53,19 +55,20 @@ export const databaseService = {
   load(): AppDatabase {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return DEFAULT_DB;
+      if (!saved) {
+        // Migration check for older versions
+        const oldV8 = localStorage.getItem('voltflow_db_v8');
+        if (oldV8) {
+          const parsed = JSON.parse(oldV8);
+          return { ...DEFAULT_DB, ...parsed, ocpiConfig: DEFAULT_DB.ocpiConfig };
+        }
+        return DEFAULT_DB;
+      }
       const parsed = JSON.parse(saved);
       
-      // Ensure authConfig structure is up to date
-      if (!parsed.authConfig) {
-        parsed.authConfig = DEFAULT_DB.authConfig;
-      } else if (!parsed.authConfig.viewOnlyAccounts) {
-        // Migration from v7 to v8
-        const oldUser = parsed.authConfig.genericUser || 'user';
-        const oldPass = parsed.authConfig.genericPass || 'user123';
-        parsed.authConfig.viewOnlyAccounts = [{ id: 'migrated-user', user: oldUser, pass: oldPass }];
-        delete parsed.authConfig.genericUser;
-        delete parsed.authConfig.genericPass;
+      // Migration check
+      if (!parsed.ocpiConfig) {
+        parsed.ocpiConfig = DEFAULT_DB.ocpiConfig;
       }
       
       return parsed;

@@ -27,6 +27,14 @@ export interface InfluxConfig {
   isEnabled: boolean;
 }
 
+export interface OcpiConfig {
+  baseUrl: string;
+  token: string;
+  partyId: string;
+  countryCode: string;
+  isEnabled: boolean;
+}
+
 export interface Connector {
   id: string;
   type: string;

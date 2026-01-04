@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, UserRole } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, InfluxConfig, AuthConfig, UserRole, OcpiConfig } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [apiConfig, setApiConfig] = useState<ApiConfig>(initialDb.apiConfig);
   const [ocppConfig, setOcppConfig] = useState<OcppConfig>(initialDb.ocppConfig);
   const [influxConfig, setInfluxConfig] = useState<InfluxConfig>(initialDb.influxConfig);
+  const [ocpiConfig, setOcpiConfig] = useState<OcpiConfig>(initialDb.ocpiConfig);
   const [authConfig, setAuthConfig] = useState<AuthConfig>(initialDb.authConfig);
   const [users, setUsers] = useState<User[]>(initialDb.users || []);
   const [chargers, setChargers] = useState<EVCharger[]>(initialDb.chargers || []);
@@ -55,13 +56,14 @@ const App: React.FC = () => {
       apiConfig,
       ocppConfig,
       influxConfig,
+      ocpiConfig,
       authConfig,
       users,
       chargers
     });
     const timer = setTimeout(() => setIsSaving(false), 800);
     return () => clearTimeout(timer);
-  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, authConfig, users, chargers]);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, influxConfig, ocpiConfig, authConfig, users, chargers]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -171,6 +173,7 @@ const App: React.FC = () => {
       setApiConfig(restored.apiConfig);
       setOcppConfig(restored.ocppConfig);
       setInfluxConfig(restored.influxConfig);
+      setOcpiConfig(restored.ocpiConfig || initialDb.ocpiConfig);
       setAuthConfig(restored.authConfig);
       setUsers(restored.users || []);
       setChargers(restored.chargers || []);
@@ -383,6 +386,7 @@ const App: React.FC = () => {
               apiConfig={apiConfig}
               ocppConfig={ocppConfig}
               influxConfig={influxConfig}
+              ocpiConfig={ocpiConfig}
               onAddRule={(r) => setPricingRules([...pricingRules, { ...r, id: Date.now().toString() }])} 
               onUpdateRule={handleUpdatePricingRule}
               onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} 
@@ -395,6 +399,7 @@ const App: React.FC = () => {
               onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
               onUpdateOcppConfig={(updates) => setOcppConfig({ ...ocppConfig, ...updates })}
               onUpdateInfluxConfig={(updates) => setInfluxConfig({ ...influxConfig, ...updates })}
+              onUpdateOcpiConfig={(updates) => setOcpiConfig({ ...ocpiConfig, ...updates })}
               onExportBackup={() => databaseService.exportBackup()}
               onImportBackup={handleImportBackup}
               lang={lang} 
