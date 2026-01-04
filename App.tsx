@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
@@ -39,7 +40,7 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
 
-  // Fix: Move state declarations above usage in useMemo to avoid TDZ errors
+  // Filter states
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedStation, setSelectedStation] = useState('all');
@@ -437,7 +438,9 @@ const App: React.FC = () => {
           {activeTab === 'security' && (
             <SecuritySettings 
               authConfig={authConfig} 
+              influxConfig={influxConfig}
               onUpdateAuthConfig={(updates) => setAuthConfig({ ...authConfig, ...updates })} 
+              onUpdateInfluxConfig={(updates) => setInfluxConfig({ ...influxConfig, ...updates })}
               lang={lang} 
               role={currentUserRole} 
             />

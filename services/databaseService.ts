@@ -26,7 +26,7 @@ const DEFAULT_DB: AppDatabase = {
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
   ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
   influxConfig: { 
-    url: 'influx-proxy', // Special keyword to use the server.js proxy
+    url: 'influx-proxy', // Relative path to use the server.js proxy
     token: 'B2V-5IfB5bGNr8dP9Z6_7NI3gCdZqmTjV_dDS2m2eJRc-W61fkFVDO1djiRdWkEVYwtVpSe2EJRV8PBCC6LuxA==', 
     org: 'iluminacion', 
     bucket: 'SMARTCHARGE', 
