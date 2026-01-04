@@ -1,7 +1,7 @@
 
-# VoltFlow EV CMS - Ubuntu Installation Guide
+# VoltFlow EV CMS - Ubuntu Installation Guide (Caddy Server)
 
-This guide details the process for deploying the VoltFlow CMS on a local Ubuntu 22.04/24.04 server.
+This guide details the process for deploying the VoltFlow CMS on a local Ubuntu server using **Caddy** as the reverse proxy.
 
 ## 1. System Preparation
 Update your package repository and upgrade existing packages.
@@ -36,64 +36,66 @@ npm run build
 ## 5. Process Management (PM2)
 ```bash
 sudo npm install -g pm2
-# We use 'preview' to serve the production build on port 3080
-pm2 start npm --name "voltflow-cms" -- run preview -- --port 3080 --host 0.0.0.0
+# We use 'preview' to serve the production build on port 3085
+pm2 start npm --name "voltflow-cms" -- run preview -- --port 3085 --host 0.0.0.0
 pm2 save
 pm2 startup
 ```
 
-## 6. Nginx Reverse Proxy
-If Nginx is not forwarding, use this improved configuration:
+## 6. Install Caddy Server
+Caddy provides automatic HTTPS and a much simpler configuration than Nginx.
+
+### Add Caddy Repository
 ```bash
-sudo apt install nginx -y
-sudo nano /etc/nginx/sites-available/voltflow
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy -y
 ```
 
-**Recommended Nginx Config:**
-```nginx
-server {
-    listen 80;
-    server_name _; # Responds to any IP or domain
+### Configure Caddy
+Edit the Caddyfile:
+```bash
+sudo nano /etc/caddy/Caddyfile
+```
 
-    location / {
-        proxy_pass http://127.0.0.1:3080; # Using IP instead of localhost
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+**Replace the content with the following:**
+```caddy
+# Replace :80 with your domain (e.g., ev.yourdomain.com) for auto-HTTPS
+:80 {
+    reverse_proxy 127.0.0.1:3085
+    
+    # Optional: Log requests
+    log {
+        output file /var/log/caddy/access.log
     }
 }
 ```
+
+Restart Caddy:
 ```bash
-sudo ln -s /etc/nginx/sites-available/voltflow /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default # Remove default to avoid conflicts
-sudo nginx -t
-sudo systemctl restart nginx
+sudo systemctl restart caddy
 ```
 
 ## 7. Connectivity Troubleshooting
-If you still cannot access the page:
+If you cannot access the page:
 
-1. **Check if App is Listening**:
-   `sudo ss -tulpn | grep 3080`
-   (Should show `0.0.0.0:3080` or `*:3080`)
+1. **Check if App is Listening on 3085**:
+   `sudo ss -tulpn | grep 3085`
 
-2. **Check Firewall**:
+2. **Check Caddy Status**:
+   `sudo systemctl status caddy`
+
+3. **Check Firewall**:
    ```bash
    sudo ufw allow 80/tcp
-   sudo ufw allow 3080/tcp
+   sudo ufw allow 443/tcp
+   sudo ufw allow 3085/tcp
    sudo ufw status
    ```
 
-3. **Check Cloud/Provider Firewall**:
-   If using AWS/Azure/GCP, ensure the **Security Group** or **Inbound Rules** allow Port 80 and 3080 from your source IP.
+4. **Verify Local App Access**:
+   `curl -I http://127.0.0.1:3085`
 
-4. **Test Local Connection**:
-   `curl -I http://127.0.0.1:3080`
-   (Should return HTTP 200)
-
-The CMS is now accessible at `http://YOUR_SERVER_IP`.
+The CMS is now accessible at `http://YOUR_SERVER_IP` (forwarded via Caddy).

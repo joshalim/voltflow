@@ -8,12 +8,12 @@ export default defineConfig({
     'process.env': (process as any).env
   },
   server: {
-    port: 3080,
+    port: 3085,
     host: '0.0.0.0', // Explicitly bind to all interfaces
     strictPort: true
   },
   preview: {
-    port: 3080,
+    port: 3085,
     host: '0.0.0.0',
     strictPort: true
   },
