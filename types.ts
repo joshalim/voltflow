@@ -9,6 +9,15 @@ export type UserRole = 'ADMIN' | 'USER' | null;
 
 // Global declaration to fix aistudio and environment variable TS errors
 declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      API_KEY: string;
+      [key: string]: string | undefined;
+    }
+  }
+
+  // Removed redundant 'var process' declaration that caused "Cannot redeclare block-scoped variable 'process'" error.
+
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
@@ -17,9 +26,10 @@ declare global {
   interface Window {
     /**
      * AIStudio property provided by the environment for API key selection.
-     * Note: Using AIStudio interface to match platform-defined type requirements.
+     * Note: Removed 'readonly' modifier to match environment-provided type definition and resolve 
+     * "All declarations of 'aistudio' must have identical modifiers" error.
      */
-    readonly aistudio: AIStudio;
+    aistudio: AIStudio;
   }
 }
 
