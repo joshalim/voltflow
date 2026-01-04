@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2 } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
-import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig } from './types';
+import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger } from './types';
 import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ImportModal from './components/ImportModal';
@@ -10,10 +10,12 @@ import AIInsights from './components/AIInsights';
 import PricingSettings from './components/PricingSettings';
 import AccountReports from './components/AccountReports';
 import Expenses from './components/Expenses';
+import OcppMonitor from './components/OcppMonitor';
+import UserManagement from './components/UserManagement';
+import ChargerManagement from './components/ChargerManagement';
 import { databaseService } from './services/databaseService';
 
 const App: React.FC = () => {
-  // Initialize state from consolidated database
   const initialDb = databaseService.load();
 
   const [transactions, setTransactions] = useState<EVTransaction[]>(initialDb.transactions);
@@ -21,8 +23,11 @@ const App: React.FC = () => {
   const [accountGroups, setAccountGroups] = useState<AccountGroup[]>(initialDb.accountGroups);
   const [expenses, setExpenses] = useState<Expense[]>(initialDb.expenses);
   const [apiConfig, setApiConfig] = useState<ApiConfig>(initialDb.apiConfig);
+  const [ocppConfig, setOcppConfig] = useState<OcppConfig>(initialDb.ocppConfig);
+  const [users, setUsers] = useState<User[]>(initialDb.users || []);
+  const [chargers, setChargers] = useState<EVCharger[]>(initialDb.chargers || []);
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'ocpp' | 'users' | 'chargers'>('dashboard');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
@@ -35,7 +40,6 @@ const App: React.FC = () => {
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
-  // Global Auto-Save Effect
   useEffect(() => {
     setIsSaving(true);
     databaseService.save({
@@ -43,11 +47,14 @@ const App: React.FC = () => {
       pricingRules,
       accountGroups,
       expenses,
-      apiConfig
+      apiConfig,
+      ocppConfig,
+      users,
+      chargers
     });
     const timer = setTimeout(() => setIsSaving(false), 800);
     return () => clearTimeout(timer);
-  }, [transactions, pricingRules, accountGroups, expenses, apiConfig]);
+  }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, users, chargers]);
 
   const uniqueStations = useMemo(() => {
     const stations = new Set<string>();
@@ -146,6 +153,9 @@ const App: React.FC = () => {
       setAccountGroups(restored.accountGroups);
       setExpenses(restored.expenses);
       setApiConfig(restored.apiConfig);
+      setOcppConfig(restored.ocppConfig);
+      setUsers(restored.users || []);
+      setChargers(restored.chargers || []);
       alert('Database restored successfully.');
     } else {
       alert('Error restoring database. File might be corrupted.');
@@ -160,9 +170,39 @@ const App: React.FC = () => {
     setSelectedYear('all');
   };
 
+  const handleOcppTransaction = (tx: EVTransaction) => {
+    setTransactions(prev => [tx, ...prev]);
+  };
+
+  const handleImportUsers = (newUsers: Omit<User, 'id' | 'createdAt'>[]) => {
+    const usersWithMeta = newUsers.map(u => ({
+      ...u,
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString()
+    }));
+    setUsers(prev => [...prev, ...usersWithMeta]);
+  };
+
+  const handleAddCharger = (charger: Omit<EVCharger, 'id' | 'createdAt'>) => {
+    setChargers(prev => [...prev, { 
+      ...charger, 
+      id: `charger-${Date.now()}`, 
+      createdAt: new Date().toISOString() 
+    }]);
+  };
+
+  const handleUpdateCharger = (id: string, updates: Partial<EVCharger>) => {
+    setChargers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const handleDeleteCharger = (id: string) => {
+    if (confirm('Are you sure you want to delete this charger?')) {
+      setChargers(prev => prev.filter(c => c.id !== id));
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* Sidebar */}
       <aside className="no-print hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-30 shadow-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="bg-orange-500 p-2 rounded-lg shadow-lg shadow-orange-200">
@@ -177,6 +217,9 @@ const App: React.FC = () => {
         <nav className="flex-1 space-y-1">
           <NavItem icon={<LayoutDashboard size={20} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={20} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
+          <NavItem icon={<Activity size={20} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
+          <NavItem icon={<Settings2 size={20} />} label={t('chargerManagement')} active={activeTab === 'chargers'} onClick={() => setActiveTab('chargers')} />
+          <NavItem icon={<Users size={20} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <NavItem icon={<BarChart3 size={20} />} label={t('reports')} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
           <NavItem icon={<ReceiptText size={20} />} label={t('expenses')} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
           <NavItem icon={<BrainCircuit size={20} />} label={t('aiInsights')} active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
@@ -214,11 +257,8 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 md:ml-64 p-4 md:p-8 print-p-0">
         <div className="max-w-6xl mx-auto space-y-8">
-          
-          {/* Global Filter Bar */}
           {(['dashboard', 'transactions', 'reports', 'expenses'].includes(activeTab)) && (
             <div className="no-print bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 animate-in slide-in-from-top-4 duration-300">
               <div className="flex items-center justify-between">
@@ -228,7 +268,6 @@ const App: React.FC = () => {
                 </div>
                 <button onClick={resetFilters} className="text-xs text-orange-600 font-bold hover:underline">{t('resetFilters')}</button>
               </div>
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
@@ -239,10 +278,8 @@ const App: React.FC = () => {
                     {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
-
                 <FilterField label={t('dateStart')} icon={<Calendar size={12} />} type="date" value={startDate} onChange={setStartDate} />
                 <FilterField label={t('dateEnd')} icon={<Calendar size={12} />} type="date" value={endDate} onChange={setEndDate} />
-                
                 {activeTab !== 'expenses' && (
                   <>
                     <div className="space-y-1">
@@ -254,7 +291,6 @@ const App: React.FC = () => {
                         {uniqueStations.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
-
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
                         <UserIcon size={10} /> {t('account')}
@@ -285,11 +321,32 @@ const App: React.FC = () => {
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={filteredExpenses} onAdd={handleAddExpense} onUpdate={handleUpdateExpense} onDelete={handleDeleteExpense} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} onNewTransaction={handleOcppTransaction} pricingRules={pricingRules} accountGroups={accountGroups} />}
+          {activeTab === 'chargers' && (
+            <ChargerManagement 
+              chargers={chargers}
+              onAddCharger={handleAddCharger}
+              onUpdateCharger={handleUpdateCharger}
+              onDeleteCharger={handleDeleteCharger}
+              lang={lang}
+            />
+          )}
+          {activeTab === 'users' && (
+            <UserManagement 
+              users={users}
+              onAddUser={(u) => setUsers([...users, { ...u, id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString() }])}
+              onImportUsers={handleImportUsers}
+              onUpdateUser={(id, updates) => setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u))}
+              onDeleteUser={(id) => setUsers(users.filter(u => u.id !== id))}
+              lang={lang}
+            />
+          )}
           {activeTab === 'pricing' && (
             <PricingSettings 
               rules={pricingRules} 
               groups={accountGroups}
               apiConfig={apiConfig}
+              ocppConfig={ocppConfig}
               onAddRule={(r) => setPricingRules([...pricingRules, { ...r, id: Date.now().toString() }])} 
               onUpdateRule={handleUpdatePricingRule}
               onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} 
@@ -300,6 +357,7 @@ const App: React.FC = () => {
               }}
               onUpdateGroup={(id, updates) => setAccountGroups(accountGroups.map(g => g.id === id ? { ...g, ...updates } : g))}
               onUpdateApiConfig={(updates) => setApiConfig({ ...apiConfig, ...updates })}
+              onUpdateOcppConfig={(updates) => setOcppConfig({ ...ocppConfig, ...updates })}
               onExportBackup={() => databaseService.exportBackup()}
               onImportBackup={handleImportBackup}
               lang={lang} 

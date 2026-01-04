@@ -1,6 +1,41 @@
 
 export type PaymentMethod = 'NEQUI' | 'DAVIPLATA' | 'EFECTIVO' | 'N/A';
 export type TransactionStatus = 'PAID' | 'UNPAID';
+export type EntityStatus = 'ACTIVE' | 'INACTIVE';
+export type UserType = 'PERSONAL' | 'BUSINESS';
+export type ChargerStatus = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
+export type ConnectorStatus = 'AVAILABLE' | 'CHARGING' | 'OCCUPIED' | 'FAULTED' | 'UNAVAILABLE';
+
+export interface Connector {
+  id: string;
+  type: string; // CCS2, CHADEMO, Type 2, J1772, etc.
+  powerKW: number;
+  status: ConnectorStatus;
+}
+
+export interface EVCharger {
+  id: string;
+  name: string;
+  location: string;
+  status: ChargerStatus;
+  connectors: Connector[];
+  createdAt: string;
+}
+
+export interface User {
+  id: string;
+  userType: UserType;
+  name: string;
+  email: string;
+  phone: string;
+  cedula?: string;
+  nit?: string;
+  company?: string;
+  rfidTag: string;
+  placa: string;
+  status: EntityStatus;
+  createdAt: string;
+}
 
 export interface EVTransaction {
   id: string; // TxID
@@ -43,6 +78,21 @@ export interface ApiConfig {
   invoiceApiUrl: string;
   invoiceApiKey: string;
   isEnabled: boolean;
+}
+
+export interface OcppConfig {
+  centralSystemUrl: string;
+  chargePointId: string;
+  isListening: boolean;
+  heartbeatInterval: number;
+}
+
+export interface OcppLog {
+  id: string;
+  timestamp: string;
+  direction: 'IN' | 'OUT';
+  messageType: string;
+  payload: any;
 }
 
 export type Language = 'en' | 'es';

@@ -1,7 +1,7 @@
 
-import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig } from '../types';
+import { EVTransaction, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger } from '../types';
 
-const STORAGE_KEY = 'voltflow_db_v3';
+const STORAGE_KEY = 'voltflow_db_v5';
 
 export interface AppDatabase {
   transactions: EVTransaction[];
@@ -9,6 +9,9 @@ export interface AppDatabase {
   accountGroups: AccountGroup[];
   expenses: Expense[];
   apiConfig: ApiConfig;
+  ocppConfig: OcppConfig;
+  users: User[];
+  chargers: EVCharger[];
   lastUpdated: string;
 }
 
@@ -18,6 +21,9 @@ const DEFAULT_DB: AppDatabase = {
   accountGroups: [],
   expenses: [],
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
+  ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
+  users: [],
+  chargers: [],
   lastUpdated: new Date().toISOString()
 };
 
@@ -63,7 +69,6 @@ export const databaseService = {
         try {
           const content = e.target?.result as string;
           const parsed = JSON.parse(content);
-          // Basic validation
           if (parsed.transactions && Array.isArray(parsed.transactions)) {
             this.save(parsed);
             resolve(parsed);

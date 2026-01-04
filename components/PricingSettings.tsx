@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { PricingRule, AccountGroup, Language, ApiConfig } from '../types';
+import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson } from 'lucide-react';
+import { Plus, Trash2, Info, Users, LayoutGrid, Target, Link2, Key, Globe, ShieldCheck, Database, Download, FileJson, Activity } from 'lucide-react';
 
 interface PricingSettingsProps {
   rules: PricingRule[];
   groups: AccountGroup[];
   apiConfig: ApiConfig;
+  ocppConfig: OcppConfig;
   onAddRule: (rule: Omit<PricingRule, 'id'>) => void;
   onUpdateRule: (id: string, rule: Partial<PricingRule>) => void;
   onDeleteRule: (id: string) => void;
@@ -15,6 +16,7 @@ interface PricingSettingsProps {
   onUpdateGroup: (id: string, updates: Partial<AccountGroup>) => void;
   onDeleteGroup: (id: string) => void;
   onUpdateApiConfig: (config: Partial<ApiConfig>) => void;
+  onUpdateOcppConfig: (config: Partial<OcppConfig>) => void;
   onExportBackup: () => void;
   onImportBackup: (file: File) => void;
   lang: Language;
@@ -24,11 +26,13 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   rules, 
   groups, 
   apiConfig,
+  ocppConfig,
   onAddRule, 
   onDeleteRule, 
   onAddGroup,
   onDeleteGroup,
   onUpdateApiConfig,
+  onUpdateOcppConfig,
   onExportBackup,
   onImportBackup,
   lang 
@@ -79,6 +83,43 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
+          {/* OCPP Integration Section */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+              <Activity size={20} className="text-orange-500" />
+              {t('ocppIntegration')}
+            </h3>
+
+            <div className="space-y-5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Link2 size={10} /> {t('apiUrl')}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={ocppConfig.centralSystemUrl} 
+                      onChange={e => onUpdateOcppConfig({ centralSystemUrl: e.target.value })}
+                      placeholder="ws://your-server.com/ocpp"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Target size={10} /> {t('stationId')}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={ocppConfig.chargePointId} 
+                      onChange={e => onUpdateOcppConfig({ chargePointId: e.target.value })}
+                      placeholder="CP001"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+               </div>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Users size={20} className="text-orange-500" />
@@ -132,7 +173,6 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             </div>
           </div>
 
-          {/* Database Management Section */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
               <Database size={20} className="text-emerald-500" />
