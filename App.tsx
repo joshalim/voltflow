@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -134,6 +134,33 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+      {/* Mobile Sticky Header with Lang Toggle */}
+      <header className="md:hidden sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between no-print shadow-sm">
+        <div className="flex items-center gap-2">
+          <Zap className="text-orange-500 w-5 h-5" />
+          <span className="font-black text-slate-800 tracking-tighter">SMART Charge</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button 
+              onClick={() => setLang('en')}
+              className={`px-2 py-1 rounded-md text-[9px] font-black transition-all ${lang === 'en' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}
+            >
+              EN
+            </button>
+            <button 
+              onClick={() => setLang('es')}
+              className={`px-2 py-1 rounded-md text-[9px] font-black transition-all ${lang === 'es' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}
+            >
+              ES
+            </button>
+          </div>
+          <button onClick={() => setCurrentUserRole(null)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </header>
+
       <aside className="no-print hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-30 shadow-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="bg-orange-500 p-2 rounded-lg shadow-lg">
@@ -145,7 +172,7 @@ const App: React.FC = () => {
           </span>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
           <NavItem icon={<LayoutDashboard size={18} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={18} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
           <NavItem icon={<Server size={18} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
@@ -165,6 +192,24 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
+          {/* Global Desktop Lang Toggle */}
+          <div className="flex items-center justify-between bg-slate-50 p-1 rounded-xl border border-slate-100 mb-2">
+            <button 
+              onClick={() => setLang('en')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Languages size={12} />
+              ENG
+            </button>
+            <button 
+              onClick={() => setLang('es')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Languages size={12} />
+              ESP
+            </button>
+          </div>
+
           <div className="space-y-2 px-2">
              <StatusIndicator active={isSaving} label="Sync" icon={<Save size={10} />} color={isSaving ? 'orange' : 'emerald'} />
              <StatusIndicator active={isPgConnected === true} label="SQL" icon={<Database size={10} />} color={isPgConnected ? 'blue' : 'rose'} />

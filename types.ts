@@ -23,6 +23,19 @@ declare global {
   }
 }
 
+/**
+ * Configuration for InfluxDB integration used for telemetry and historical data.
+ */
+export interface InfluxConfig {
+  url: string;
+  token: string;
+  org: string;
+  bucket: string;
+  precision?: 's' | 'ms';
+  measurementPrefix?: string;
+  isEnabled: boolean;
+}
+
 export interface PostgresConfig {
   host: string;
   port: number;
@@ -133,17 +146,6 @@ export interface ApiConfig {
   invoiceApiUrl: string;
   invoiceApiKey: string;
   isEnabled: boolean;
-}
-
-// Added InfluxConfig interface to fix import error in services/influxService.ts
-export interface InfluxConfig {
-  url: string;
-  token: string;
-  org: string;
-  bucket: string;
-  isEnabled: boolean;
-  precision?: string;
-  measurementPrefix?: string;
 }
 
 export interface OcppConfig {
