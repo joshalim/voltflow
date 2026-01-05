@@ -24,7 +24,14 @@ const App: React.FC = () => {
   const [accountGroups, setAccountGroups] = useState<AccountGroup[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [apiConfig, setApiConfig] = useState<ApiConfig>({ invoiceApiKey: '', invoiceApiUrl: '', isEnabled: false });
-  const [ocppConfig, setOcppConfig] = useState<OcppConfig>({ centralSystemUrl: '', chargePointId: '', heartbeatInterval: 60, isListening: false });
+  const [ocppConfig, setOcppConfig] = useState<OcppConfig>({ 
+    centralSystemUrl: 'ws://voltflow.io/ocpp', 
+    port: 3085, 
+    path: '/ocpp', 
+    heartbeatInterval: 60, 
+    isListening: false,
+    securityProfile: 'PLAIN'
+  });
   const [postgresConfig, setPostgresConfig] = useState<PostgresConfig>({ host: 'localhost', port: 5432, user: '', pass: '', database: '', ssl: false, isEnabled: false });
   const [ocpiConfig, setOcpiConfig] = useState<OcpiConfig>({ baseUrl: '', countryCode: '', isEnabled: false, partyId: '', token: '' });
   const [authConfig, setAuthConfig] = useState<AuthConfig>({ adminPass: '', adminUser: '', viewOnlyAccounts: [] });
@@ -55,7 +62,7 @@ const App: React.FC = () => {
       setAccountGroups(data.accountGroups);
       setExpenses(data.expenses);
       setApiConfig(data.apiConfig);
-      setOcppConfig(data.ocppConfig);
+      if (data.ocppConfig) setOcppConfig(prev => ({ ...prev, ...data.ocppConfig }));
       setPostgresConfig(data.postgresConfig);
       setOcpiConfig(data.ocpiConfig);
       setAuthConfig(data.authConfig);
@@ -96,14 +103,6 @@ const App: React.FC = () => {
     const interval = setInterval(checkHealthes, 30000);
     return () => clearInterval(interval);
   }, [postgresConfig]);
-
-  const uniqueStations = useMemo(() => Array.from(new Set(transactions.map(tx => tx.station))), [transactions]);
-  const uniqueAccounts = useMemo(() => Array.from(new Set(transactions.map(tx => tx.account))).sort(), [transactions]);
-  const availableYears = useMemo(() => {
-    const years = new Set<string>();
-    transactions.forEach(tx => years.add(new Date(tx.startTime).getFullYear().toString()));
-    return Array.from(years).sort((a, b) => b.localeCompare(a));
-  }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
@@ -227,7 +226,7 @@ const App: React.FC = () => {
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={expenses} role={currentUserRole} onAdd={(e) => setExpenses([...expenses, {...e, id: Date.now().toString()}])} onUpdate={(id, up) => setExpenses(expenses.map(e => e.id === id ? {...e, ...up} : e))} onDelete={(id) => setExpenses(expenses.filter(e => e.id !== id))} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} role={currentUserRole} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} lang={lang} role={currentUserRole} onNewTransaction={(t) => setTransactions([t, ...transactions])} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} />}
+          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} onUpdateOcppConfig={(up) => setOcppConfig(prev => ({ ...prev, ...up }))} lang={lang} role={currentUserRole} onNewTransaction={(t) => setTransactions([t, ...transactions])} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} />}
           {activeTab === 'chargers' && <ChargerManagement chargers={chargers} onAddCharger={(c) => setChargers([...chargers, {...c, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} onDeleteCharger={(id) => setChargers(chargers.filter(c => c.id !== id))} lang={lang} />}
           {activeTab === 'users' && <UserManagement users={users} onAddUser={(u) => setUsers([...users, {...u, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onImportUsers={(nu) => setUsers([...users, ...nu.map(u => ({...u, id: Math.random().toString(), createdAt: new Date().toISOString()}))])} onUpdateUser={(id, up) => setUsers(users.map(u => u.id === id ? {...u, ...up} : u))} onDeleteUser={(id) => setUsers(users.filter(u => u.id !== id))} lang={lang} />}
           {activeTab === 'pricing' && <PricingSettings rules={pricingRules} groups={accountGroups} apiConfig={apiConfig} ocppConfig={ocppConfig} ocpiConfig={ocpiConfig} onAddRule={(r) => setPricingRules([...pricingRules, {...r, id: Date.now().toString()}])} onUpdateRule={(id, up) => setPricingRules(pricingRules.map(r => r.id === id ? {...r, ...up} : r))} onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} onAddGroup={(g) => setAccountGroups([...accountGroups, {...g, id: Date.now().toString()}])} onDeleteGroup={(id) => setAccountGroups(accountGroups.filter(g => g.id !== id))} onUpdateGroup={(id, up) => setAccountGroups(accountGroups.map(g => g.id === id ? {...g, ...up} : g))} onUpdateApiConfig={(up) => setApiConfig(prev => ({ ...prev, ...up }))} onUpdateOcppConfig={(up) => setOcppConfig(prev => ({ ...prev, ...up }))} onUpdateOcpiConfig={(up) => setOcpiConfig(prev => ({ ...prev, ...up }))} onExportBackup={() => databaseService.exportBackup({ transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, lastUpdated: new Date().toISOString() })} onImportBackup={(f) => {}} lang={lang} />}

@@ -112,9 +112,24 @@ app.post('/api/db/save', async (req, res) => {
   }
 });
 
+// Mock Status for NOC / Monitoring
+app.get('/api/ocpp/status', (req, res) => {
+  res.json({ status: 'LISTENING', port: PORT, protocol: 'ocpp1.6j' });
+});
+
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
-app.listen(PORT, HOST, () => {
+const server = http.createServer(app);
+
+// Simple log for debugging
+server.on('upgrade', (request, socket, head) => {
+  console.log('Incoming WebSocket Upgrade request for OCPP...');
+  // In a real scenario, we would use 'ws' library here to handle the upgrade.
+  // For now, we just acknowledge the attempt in logs.
+});
+
+server.listen(PORT, HOST, () => {
   console.log(`VoltFlow CMS @ http://${HOST}:${PORT}`);
+  console.log(`OCPP Gateway available at ws://${HOST}:${PORT}/ocpp`);
 });

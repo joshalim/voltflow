@@ -22,7 +22,15 @@ const DEFAULT_DB: AppDatabase = {
   accountGroups: [],
   expenses: [],
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
-  ocppConfig: { centralSystemUrl: 'ws://voltflow.local/ocpp', chargePointId: 'CP001', isListening: false, heartbeatInterval: 60 },
+  // Fixed: Updated OcppConfig to match the interface definition in types.ts (removed chargePointId, added missing fields)
+  ocppConfig: { 
+    centralSystemUrl: 'ws://voltflow.io/ocpp', 
+    port: 3085, 
+    path: '/ocpp', 
+    isListening: false, 
+    heartbeatInterval: 60,
+    securityProfile: 'PLAIN'
+  },
   postgresConfig: {
     host: 'localhost',
     port: 5432,

@@ -88,6 +88,7 @@ export interface EVCharger {
   model?: string;
   firmwareVersion?: string;
   vendor?: string;
+  ipAddress?: string;
 }
 
 export interface User {
@@ -150,9 +151,11 @@ export interface ApiConfig {
 
 export interface OcppConfig {
   centralSystemUrl: string;
-  chargePointId: string;
+  port: number;
+  path: string;
   isListening: boolean;
   heartbeatInterval: number;
+  securityProfile: 'TLS' | 'PLAIN';
 }
 
 export interface OcppLog {
@@ -161,6 +164,7 @@ export interface OcppLog {
   direction: 'IN' | 'OUT';
   messageType: string;
   payload: any;
+  chargerId?: string;
 }
 
 export type Language = 'en' | 'es';
