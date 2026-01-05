@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Upload, CheckCircle2, AlertTriangle, FileWarning, Zap } from 'lucide-react';
+import { X, Upload, CheckCircle2, AlertTriangle, FileWarning, Zap, Info } from 'lucide-react';
 import { EVTransaction, PricingRule, AccountGroup, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -30,6 +30,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [duplicateCount, setDuplicateCount] = useState(0);
+  const [zeroUsageCount, setZeroUsageCount] = useState(0);
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
@@ -41,16 +42,17 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
     return Math.max(0, Math.floor(diffMs / 60000));
   };
 
-  const validateData = (headers: string[], rows: string[][]): { data: EVTransaction[], errors: string[], duplicates: number } => {
+  const validateData = (headers: string[], rows: string[][]): { data: EVTransaction[], errors: string[], duplicates: number, zeroUsage: number } => {
     const errors: string[] = [];
     const validTransactions: EVTransaction[] = [];
     const normalizedHeaders = headers.map(h => h.trim());
     const missingHeaders = REQUIRED_HEADERS.filter(req => !normalizedHeaders.includes(req));
     let duplicates = 0;
+    let zeroUsage = 0;
     const batchTxIds = new Set<string>();
     
     if (missingHeaders.length > 0) {
-      return { data: [], errors: [`Missing headers: ${missingHeaders.join(', ')}`], duplicates: 0 };
+      return { data: [], errors: [`Missing headers: ${missingHeaders.join(', ')}`], duplicates: 0, zeroUsage: 0 };
     }
 
     const hMap: Record<string, number> = {};
@@ -63,6 +65,15 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       const txId = row[hMap['TxID']]?.trim();
       if (!txId) return;
       
+      const meterKWhValue = row[hMap['Meter value(kW.h)']]?.trim();
+      const meterKWh = parseFloat(meterKWhValue);
+
+      // CRITICAL: Filter out transactions with 0 or invalid meter value
+      if (isNaN(meterKWh) || meterKWh <= 0) {
+        zeroUsage++;
+        return;
+      }
+
       if (existingTxIds.has(txId) || batchTxIds.has(txId)) {
         duplicates++;
         return;
@@ -73,10 +84,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       const account = row[hMap['Account']]?.trim() || 'Anonymous';
       const startTime = row[hMap['Start Time']]?.trim();
       const endTime = row[hMap['End Time']]?.trim();
-      const meterKWhValue = row[hMap['Meter value(kW.h)']]?.trim();
-      const meterKWh = parseFloat(meterKWhValue);
-
-      if (isNaN(meterKWh) || meterKWh < 0) return;
 
       const startDateObj = new Date(startTime);
       const endDateObj = new Date(endTime);
@@ -105,7 +112,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       }
     });
 
-    return { data: validTransactions, errors: errors.slice(0, 5), duplicates };
+    return { data: validTransactions, errors: errors.slice(0, 5), duplicates, zeroUsage };
   };
 
   const handleFile = (file: File) => {
@@ -113,6 +120,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
     setValidationErrors([]);
     setParsedData([]);
     setDuplicateCount(0);
+    setZeroUsageCount(0);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -124,11 +132,12 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
           setIsProcessing(false);
           return;
         }
-        const { data, errors, duplicates } = validateData(lines[0].split(','), lines.slice(1).map(l => l.split(',')));
+        const { data, errors, duplicates, zeroUsage } = validateData(lines[0].split(','), lines.slice(1).map(l => l.split(',')));
         if (errors.length > 0) setValidationErrors(errors);
         else {
           setParsedData(data);
           setDuplicateCount(duplicates);
+          setZeroUsageCount(zeroUsage);
         }
       } catch (err) {
         setValidationErrors(["Failed to read file. Please ensure it is a valid CSV format."]);
@@ -156,7 +165,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
         </div>
         
         <div className="p-8">
-          {!parsedData.length && duplicateCount === 0 && !isProcessing && validationErrors.length === 0 ? (
+          {!parsedData.length && duplicateCount === 0 && zeroUsageCount === 0 && !isProcessing && validationErrors.length === 0 ? (
             <div 
               onDragEnter={onDrag} onDragLeave={onDrag} onDragOver={onDrag} onDrop={onDrop}
               className={`border-3 border-dashed rounded-[2rem] p-12 flex flex-col items-center transition-all ${dragActive ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300'}`}
@@ -201,15 +210,27 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
                 </div>
               )}
 
-              {duplicateCount > 0 && (
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex items-center gap-5 animate-in slide-in-from-bottom-2">
-                  <div className="bg-slate-400 p-3 rounded-2xl shadow-lg shadow-slate-100"><FileWarning className="text-white" size={24} /></div>
-                  <div>
-                    <p className="text-slate-900 font-black text-lg leading-tight">{duplicateCount} {t('duplicatesSkipped')}</p>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Existing TxIDs ignored</p>
+              <div className="grid grid-cols-2 gap-4">
+                {duplicateCount > 0 && (
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3 animate-in slide-in-from-bottom-2">
+                    <div className="bg-slate-400 p-2 rounded-xl"><FileWarning className="text-white" size={16} /></div>
+                    <div>
+                      <p className="text-slate-900 font-black text-sm leading-tight">{duplicateCount} Duplicates</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Ignored</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {zeroUsageCount > 0 && (
+                  <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-center gap-3 animate-in slide-in-from-bottom-2">
+                    <div className="bg-amber-500 p-2 rounded-xl"><Info className="text-white" size={16} /></div>
+                    <div>
+                      <p className="text-amber-900 font-black text-sm leading-tight">{zeroUsageCount} Zero Use</p>
+                      <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest">Skipped</p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {parsedData.length > 0 && (
                 <div className="space-y-4">
@@ -218,7 +239,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
                       <Zap size={10} /> Dynamic Billing Engine
                     </h4>
                     <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                      Costs have been pre-calculated using the <span className="text-orange-600 font-black">Account Group Hierarchy</span>. Total batch value: <span className="font-black text-slate-800">${new Intl.NumberFormat().format(parsedData.reduce((s,t) => s + t.costCOP, 0))} COP</span>.
+                      Costs pre-calculated using <span className="text-orange-600 font-black">Account Hierarchy</span>. Total value: <span className="font-black text-slate-800">${new Intl.NumberFormat().format(parsedData.reduce((s,t) => s + t.costCOP, 0))} COP</span>.
                     </p>
                   </div>
                   <button 
@@ -231,9 +252,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
                 </div>
               )}
 
-              {parsedData.length === 0 && (duplicateCount > 0 || validationErrors.length > 0) && (
+              {parsedData.length === 0 && (duplicateCount > 0 || zeroUsageCount > 0 || validationErrors.length > 0) && (
                 <button 
-                  onClick={() => { setDuplicateCount(0); setParsedData([]); setValidationErrors([]); }}
+                  onClick={() => { setDuplicateCount(0); setZeroUsageCount(0); setParsedData([]); setValidationErrors([]); }}
                   className="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all"
                 >
                   Restart Process
