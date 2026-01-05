@@ -1,5 +1,8 @@
 {
-  "name": "SmartCharge WebApp",
-  "description": "A comprehensive EV charging transaction management system featuring Excel/CSV import, real-time analytics, and AI-driven infrastructure insights.",
-  "requestFramePermissions": []
+  "name": "VoltFlow EV CMS",
+  "description": "Enterprise EV Charging Management System with real-time NOC, Driver App, and AI Analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
 }

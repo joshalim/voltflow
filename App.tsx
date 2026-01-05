@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages, Network } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages, Network, Smartphone } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -15,6 +15,7 @@ import UserManagement from './components/UserManagement';
 import ChargerManagement from './components/ChargerManagement';
 import Login from './components/Login';
 import SecuritySettings from './components/SecuritySettings';
+import MobileApp from './components/MobileApp';
 import { databaseService } from './services/databaseService';
 
 const App: React.FC = () => {
@@ -41,6 +42,8 @@ const App: React.FC = () => {
   const [chargers, setChargers] = useState<EVCharger[]>([]);
   
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [viewMode, setViewMode] = useState<'DESKTOP' | 'MOBILE'>('DESKTOP');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'network' | 'users' | 'security'>('dashboard');
   const [infraSubTab, setInfraSubTab] = useState<'live' | 'hardware'>('live');
   const [lang, setLang] = useState<Language>('en');
@@ -91,20 +94,28 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, isInitialized]);
 
-  // Health Checks
-  useEffect(() => {
-    const checkHealthes = async () => {
-      if (postgresConfig.isEnabled) {
-        const h = await databaseService.testPostgres(postgresConfig);
-        setIsPgConnected(h.success);
-      } else {
-        setIsPgConnected(null);
-      }
+  const handleStartSession = (chargerId: string, connectorId: string) => {
+    if (!currentUser) return;
+    const charger = chargers.find(c => c.id === chargerId);
+    if (!charger) return;
+    
+    const newTx: EVTransaction = {
+      id: `TX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      station: charger.name,
+      connector: connectorId,
+      account: currentUser.id,
+      startTime: new Date().toISOString(),
+      endTime: new Date().toISOString(),
+      meterKWh: 0,
+      costCOP: 0,
+      durationMinutes: 0,
+      appliedRate: 1500,
+      status: 'UNPAID',
+      paymentType: 'N/A'
     };
-    checkHealthes();
-    const interval = setInterval(checkHealthes, 30000);
-    return () => clearInterval(interval);
-  }, [postgresConfig]);
+    
+    setTransactions(prev => [newTx, ...prev]);
+  };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
@@ -130,7 +141,36 @@ const App: React.FC = () => {
   }
 
   if (!currentUserRole) {
-    return <Login authConfig={authConfig} lang={lang} onLangChange={setLang} onLogin={setCurrentUserRole} />;
+    return (
+      <Login 
+        authConfig={authConfig} 
+        lang={lang} 
+        onLangChange={setLang} 
+        onLogin={(role, user) => {
+          setCurrentUserRole(role);
+          if (user) setCurrentUser(user);
+          else {
+            // Mock admin as a user if needed for testing
+            setCurrentUser({ id: 'ADMIN-01', name: 'System Admin', email: 'admin@voltflow.io', phone: '000', userType: 'PERSONAL', rfidTag: 'ADMIN', status: 'ACTIVE', createdAt: '' });
+          }
+        }} 
+        users={users}
+      />
+    );
+  }
+
+  // Handle Mobile View Override
+  if (viewMode === 'MOBILE' && currentUser) {
+    return (
+      <MobileApp 
+        user={currentUser} 
+        chargers={chargers} 
+        transactions={transactions} 
+        lang={lang} 
+        onLogout={() => setCurrentUserRole(null)}
+        onStartSession={handleStartSession}
+      />
+    );
   }
 
   return (
@@ -142,20 +182,9 @@ const App: React.FC = () => {
           <span className="font-black text-slate-800 tracking-tighter">SMART Charge</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-            <button 
-              onClick={() => setLang('en')}
-              className={`px-2 py-1 rounded-md text-[9px] font-black transition-all ${lang === 'en' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}
-            >
-              EN
-            </button>
-            <button 
-              onClick={() => setLang('es')}
-              className={`px-2 py-1 rounded-md text-[9px] font-black transition-all ${lang === 'es' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400'}`}
-            >
-              ES
-            </button>
-          </div>
+          <button onClick={() => setViewMode('MOBILE')} className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+            <Smartphone size={18} />
+          </button>
           <button onClick={() => setCurrentUserRole(null)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">
             <LogOut size={18} />
           </button>
@@ -190,13 +219,19 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
+          <button 
+            onClick={() => setViewMode('MOBILE')}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-orange-50 text-orange-600 rounded-xl font-black text-xs border border-orange-100 hover:bg-orange-100 transition-all"
+          >
+            <Smartphone size={16} /> Driver Portal Mode
+          </button>
+          
           <div className="flex items-center justify-between bg-slate-50 p-1 rounded-xl border border-slate-100 mb-2">
             <button onClick={() => setLang('en')} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>ENG</button>
             <button onClick={() => setLang('es')} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>ESP</button>
           </div>
           <div className="space-y-2 px-2">
              <StatusIndicator active={isSaving} label="Sync" icon={<Save size={10} />} color={isSaving ? 'orange' : 'emerald'} />
-             <StatusIndicator active={isPgConnected === true} label="SQL" icon={<Database size={10} />} color={isPgConnected ? 'blue' : 'rose'} />
           </div>
           <button onClick={() => setCurrentUserRole(null)} className="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold hover:bg-rose-100 transition flex items-center justify-center gap-2">
             <LogOut size={18} /> {t('logout')}

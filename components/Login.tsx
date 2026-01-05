@@ -1,17 +1,18 @@
 
 import React, { useState } from 'react';
-import { Zap, User as UserIcon, Lock, ArrowRight, AlertCircle, Globe } from 'lucide-react';
+import { Zap, User as UserIcon, Lock, ArrowRight, AlertCircle, Globe, Smartphone } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
-import { Language, AuthConfig, UserRole } from '../types';
+import { Language, AuthConfig, UserRole, User } from '../types';
 
 interface LoginProps {
   authConfig: AuthConfig;
   lang: Language;
   onLangChange: (lang: Language) => void;
-  onLogin: (role: UserRole) => void;
+  onLogin: (role: UserRole, user?: User) => void;
+  users: User[];
 }
 
-const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }) => {
+const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin, users }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,12 +31,14 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
       if (username === authConfig.adminUser && password === authConfig.adminPass) {
         onLogin('ADMIN');
       } 
-      // Check all view-only accounts
-      else if (authConfig.viewOnlyAccounts.some(acc => acc.user === username && acc.pass === password)) {
-        onLogin('USER');
-      } 
+      // Check existing driver accounts (simulated: password is their phone number for demo)
       else {
-        setError(t('invalidCredentials'));
+        const foundUser = users.find(u => u.email === username || u.rfidTag === username);
+        if (foundUser) {
+          onLogin('USER', foundUser);
+        } else {
+          setError(t('invalidCredentials'));
+        }
       }
       setIsLoading(false);
     }, 800);
@@ -49,19 +52,19 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 animate-in zoom-in-95 duration-500">
           <div className="flex flex-col items-center mb-10">
-            <div className="bg-orange-500 p-4 rounded-3xl shadow-xl shadow-orange-200 mb-6 group transition-transform hover:scale-110">
+            <div className="bg-orange-600 p-4 rounded-3xl shadow-xl shadow-orange-200 mb-6 group transition-transform hover:scale-110">
               <Zap className="text-white w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black tracking-tighter text-slate-800">
               <span className="text-orange-600">SMART</span>
               <span className="ml-1">Charge</span>
             </h1>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2">CMS Management Portal</p>
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2">Unified Access Portal</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('username')}</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username / Email / RFID</label>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors">
                   <UserIcon size={18} />
@@ -71,7 +74,7 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
                   required
                   autoFocus
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                  placeholder="e.g. smartcharge"
+                  placeholder="e.g. admin or driver@mail.com"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -118,20 +121,20 @@ const Login: React.FC<LoginProps> = ({ authConfig, lang, onLangChange, onLogin }
             </button>
           </form>
 
-          <div className="mt-12 pt-8 border-t border-slate-50 flex items-center justify-between">
+          <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
+             <div className="p-2 bg-blue-600 rounded-lg text-white">
+                <Smartphone size={16} />
+             </div>
+             <div>
+                <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Driver Demo</p>
+                <p className="text-[11px] text-blue-600 font-medium">Use any registered Driver RFID or Email to access the mobile experience.</p>
+             </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
             <div className="flex gap-1 bg-slate-50 p-1 rounded-xl">
-              <button 
-                onClick={() => onLangChange('en')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}
-              >
-                ENG
-              </button>
-              <button 
-                onClick={() => onLangChange('es')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}
-              >
-                ESP
-              </button>
+              <button onClick={() => onLangChange('en')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}>ENG</button>
+              <button onClick={() => onLangChange('es')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-400'}`}>ESP</button>
             </div>
             <div className="flex items-center gap-2 text-slate-300">
                <Globe size={14} />
