@@ -33,17 +33,6 @@ export interface PostgresConfig {
   isEnabled: boolean;
 }
 
-// Added InfluxConfig interface to resolve import error in services/influxService.ts
-export interface InfluxConfig {
-  url: string;
-  token: string;
-  org: string;
-  bucket: string;
-  precision?: 's' | 'ms' | 'us' | 'ns';
-  measurementPrefix?: string;
-  isEnabled: boolean;
-}
-
 export interface ViewOnlyAccount {
   id: string;
   user: string;
@@ -144,6 +133,17 @@ export interface ApiConfig {
   invoiceApiUrl: string;
   invoiceApiKey: string;
   isEnabled: boolean;
+}
+
+// Added InfluxConfig interface to fix import error in services/influxService.ts
+export interface InfluxConfig {
+  url: string;
+  token: string;
+  org: string;
+  bucket: string;
+  isEnabled: boolean;
+  precision?: string;
+  measurementPrefix?: string;
 }
 
 export interface OcppConfig {

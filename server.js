@@ -112,24 +112,6 @@ app.post('/api/db/save', async (req, res) => {
   }
 });
 
-// InfluxDB Proxy Middleware
-app.all('/influx-proxy/*', (req, res) => {
-  const targetPath = req.url.replace('/influx-proxy', '');
-  const options = {
-    hostname: '127.0.0.1',
-    port: 8086,
-    path: targetPath,
-    method: req.method,
-    headers: { ...req.headers, host: '127.0.0.1:8086' }
-  };
-  const proxyReq = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
-    proxyRes.pipe(res, { end: true });
-  });
-  req.pipe(proxyReq, { end: true });
-  proxyReq.on('error', (e) => res.status(502).send('InfluxDB Unreachable'));
-});
-
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 

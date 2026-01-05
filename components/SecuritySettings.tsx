@@ -101,16 +101,16 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({
             </div>
 
             <div className="space-y-4">
-              <ConfigField label="Host" value={postgresConfig.host} onChange={(v) => onUpdatePostgresConfig({ host: v })} placeholder="localhost" icon={<Globe size={12}/>} />
+              <ConfigField label="Host" value={postgresConfig.host} onChange={(v: string) => onUpdatePostgresConfig({ host: v })} placeholder="localhost" icon={<Globe size={12}/>} />
               
               <div className="grid grid-cols-2 gap-4">
-                <ConfigField label="Port" value={postgresConfig.port.toString()} onChange={(v) => onUpdatePostgresConfig({ port: parseInt(v) || 5432 })} placeholder="5432" icon={<Network size={12}/>} />
-                <ConfigField label="Database" value={postgresConfig.database} onChange={(v) => onUpdatePostgresConfig({ database: v })} placeholder="voltflow" icon={<Database size={12}/>} />
+                <ConfigField label="Port" value={postgresConfig.port.toString()} onChange={(v: string) => onUpdatePostgresConfig({ port: parseInt(v) || 5432 })} placeholder="5432" icon={<Network size={12}/>} />
+                <ConfigField label="Database" value={postgresConfig.database} onChange={(v: string) => onUpdatePostgresConfig({ database: v })} placeholder="voltflow" icon={<Database size={12}/>} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <ConfigField label="Username" value={postgresConfig.user} onChange={(v) => onUpdatePostgresConfig({ user: v })} placeholder="postgres" icon={<UserIcon size={12}/>} />
-                <ConfigField label="Password" value={postgresConfig.pass} onChange={(v) => onUpdatePostgresConfig({ pass: v })} placeholder="••••••••" icon={<Key size={12}/>} type="password" />
+                <ConfigField label="Username" value={postgresConfig.user} onChange={(v: string) => onUpdatePostgresConfig({ user: v })} placeholder="postgres" icon={<UserIcon size={12}/>} />
+                <ConfigField label="Password" value={postgresConfig.pass} onChange={(v: string) => onUpdatePostgresConfig({ pass: v })} placeholder="••••••••" icon={<Key size={12}/>} type="password" />
               </div>
 
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
