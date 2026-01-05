@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages, Network } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -25,9 +25,11 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [apiConfig, setApiConfig] = useState<ApiConfig>({ invoiceApiKey: '', invoiceApiUrl: '', isEnabled: false });
   const [ocppConfig, setOcppConfig] = useState<OcppConfig>({ 
-    centralSystemUrl: 'ws://voltflow.io/ocpp', 
+    domain: 'voltflow.io', 
     port: 3085, 
     path: '/ocpp', 
+    identity: 'VF-CORE-01',
+    referenceUrl: 'https://docs.voltflow.io/ocpp-specs',
     heartbeatInterval: 60, 
     isListening: false,
     securityProfile: 'PLAIN'
@@ -39,8 +41,8 @@ const App: React.FC = () => {
   const [chargers, setChargers] = useState<EVCharger[]>([]);
   
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'ocpp' | 'users' | 'chargers' | 'security'>('dashboard');
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'pricing' | 'reports' | 'expenses' | 'network' | 'users' | 'security'>('dashboard');
+  const [infraSubTab, setInfraSubTab] = useState<'live' | 'hardware'>('live');
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
   const [isPgConnected, setIsPgConnected] = useState<boolean | null>(null);
@@ -57,17 +59,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       const data = await databaseService.load();
-      setTransactions(data.transactions);
-      setPricingRules(data.pricingRules);
-      setAccountGroups(data.accountGroups);
-      setExpenses(data.expenses);
-      setApiConfig(data.apiConfig);
+      setTransactions(data.transactions || []);
+      setPricingRules(data.pricingRules || []);
+      setAccountGroups(data.accountGroups || []);
+      setExpenses(data.expenses || []);
+      setApiConfig(data.apiConfig || { invoiceApiKey: '', invoiceApiUrl: '', isEnabled: false });
       if (data.ocppConfig) setOcppConfig(prev => ({ ...prev, ...data.ocppConfig }));
-      setPostgresConfig(data.postgresConfig);
-      setOcpiConfig(data.ocpiConfig);
-      setAuthConfig(data.authConfig);
-      setUsers(data.users);
-      setChargers(data.chargers);
+      setPostgresConfig(data.postgresConfig || { host: 'localhost', port: 5432, user: '', pass: '', database: '', ssl: false, isEnabled: false });
+      setOcpiConfig(data.ocpiConfig || { baseUrl: '', countryCode: '', isEnabled: false, partyId: '', token: '' });
+      setAuthConfig(data.authConfig || { adminPass: '', adminUser: '', viewOnlyAccounts: [] });
+      setUsers(data.users || []);
+      setChargers(data.chargers || []);
       setIsInitialized(true);
     };
     init();
@@ -133,7 +135,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* Mobile Sticky Header with Lang Toggle */}
+      {/* Mobile Sticky Header */}
       <header className="md:hidden sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between no-print shadow-sm">
         <div className="flex items-center gap-2">
           <Zap className="text-orange-500 w-5 h-5" />
@@ -174,12 +176,9 @@ const App: React.FC = () => {
         <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
           <NavItem icon={<LayoutDashboard size={18} />} label={t('dashboard')} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<TableIcon size={18} />} label={t('transactions')} active={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')} />
-          <NavItem icon={<Server size={18} />} label={t('liveMonitor')} active={activeTab === 'ocpp'} onClick={() => setActiveTab('ocpp')} />
+          <NavItem icon={<Network size={18} />} label={t('chargerManagement')} active={activeTab === 'network'} onClick={() => setActiveTab('network')} />
           {currentUserRole === 'ADMIN' && (
-            <>
-              <NavItem icon={<Settings2 size={18} />} label={t('chargerManagement')} active={activeTab === 'chargers'} onClick={() => setActiveTab('chargers')} />
-              <NavItem icon={<Users size={18} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-            </>
+             <NavItem icon={<Users size={18} />} label={t('userManagement')} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           )}
           <NavItem icon={<BarChart3 size={18} />} label={t('reports')} active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
           <NavItem icon={<ReceiptText size={18} />} label={t('expenses')} active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} />
@@ -191,24 +190,10 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t space-y-4">
-          {/* Global Desktop Lang Toggle */}
           <div className="flex items-center justify-between bg-slate-50 p-1 rounded-xl border border-slate-100 mb-2">
-            <button 
-              onClick={() => setLang('en')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Languages size={12} />
-              ENG
-            </button>
-            <button 
-              onClick={() => setLang('es')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Languages size={12} />
-              ESP
-            </button>
+            <button onClick={() => setLang('en')} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'en' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>ENG</button>
+            <button onClick={() => setLang('es')} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black transition-all ${lang === 'es' ? 'bg-white shadow-sm text-orange-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>ESP</button>
           </div>
-
           <div className="space-y-2 px-2">
              <StatusIndicator active={isSaving} label="Sync" icon={<Save size={10} />} color={isSaving ? 'orange' : 'emerald'} />
              <StatusIndicator active={isPgConnected === true} label="SQL" icon={<Database size={10} />} color={isPgConnected ? 'blue' : 'rose'} />
@@ -223,11 +208,49 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto space-y-8">
           {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} expenses={expenses} chargers={chargers} lang={lang} />}
           {activeTab === 'transactions' && <TransactionTable transactions={filteredTransactions} lang={lang} role={currentUserRole} onClear={() => setTransactions([])} onUpdate={(id, up) => setTransactions(transactions.map(t => t.id === id ? {...t, ...up} : t))} onDelete={(id) => setTransactions(transactions.filter(t => t.id !== id))} onBulkUpdate={(ids, up) => setTransactions(transactions.map(t => ids.includes(t.id) ? {...t, ...up} : t))} onBulkDelete={(ids) => setTransactions(transactions.filter(t => !ids.includes(t.id)))} />}
+          
+          {activeTab === 'network' && (
+            <div className="space-y-6">
+              <div className="flex bg-white p-1 rounded-2xl border border-slate-200 w-fit no-print">
+                <button 
+                  onClick={() => setInfraSubTab('live')}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${infraSubTab === 'live' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Activity size={16} /> {t('liveMonitor')}
+                </button>
+                <button 
+                  onClick={() => setInfraSubTab('hardware')}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${infraSubTab === 'hardware' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Settings2 size={16} /> {t('chargerList')}
+                </button>
+              </div>
+
+              {infraSubTab === 'live' ? (
+                <OcppMonitor 
+                  ocppConfig={ocppConfig} 
+                  onUpdateOcppConfig={(up) => setOcppConfig(prev => ({ ...prev, ...up }))} 
+                  lang={lang} role={currentUserRole} 
+                  onNewTransaction={(t) => setTransactions([t, ...transactions])} 
+                  pricingRules={pricingRules} accountGroups={accountGroups} 
+                  chargers={chargers} 
+                  onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} 
+                />
+              ) : (
+                <ChargerManagement 
+                  chargers={chargers} 
+                  onAddCharger={(c) => setChargers([...chargers, {...c, id: Date.now().toString(), createdAt: new Date().toISOString()}])} 
+                  onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} 
+                  onDeleteCharger={(id) => setChargers(chargers.filter(c => c.id !== id))} 
+                  lang={lang} 
+                />
+              )}
+            </div>
+          )}
+
           {activeTab === 'reports' && <AccountReports transactions={filteredTransactions} lang={lang} />}
           {activeTab === 'expenses' && <Expenses expenses={expenses} role={currentUserRole} onAdd={(e) => setExpenses([...expenses, {...e, id: Date.now().toString()}])} onUpdate={(id, up) => setExpenses(expenses.map(e => e.id === id ? {...e, ...up} : e))} onDelete={(id) => setExpenses(expenses.filter(e => e.id !== id))} lang={lang} />}
           {activeTab === 'ai' && <AIInsights transactions={filteredTransactions} lang={lang} role={currentUserRole} />}
-          {activeTab === 'ocpp' && <OcppMonitor ocppConfig={ocppConfig} onUpdateOcppConfig={(up) => setOcppConfig(prev => ({ ...prev, ...up }))} lang={lang} role={currentUserRole} onNewTransaction={(t) => setTransactions([t, ...transactions])} pricingRules={pricingRules} accountGroups={accountGroups} chargers={chargers} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} />}
-          {activeTab === 'chargers' && <ChargerManagement chargers={chargers} onAddCharger={(c) => setChargers([...chargers, {...c, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onUpdateCharger={(id, up) => setChargers(chargers.map(c => c.id === id ? {...c, ...up} : c))} onDeleteCharger={(id) => setChargers(chargers.filter(c => c.id !== id))} lang={lang} />}
           {activeTab === 'users' && <UserManagement users={users} onAddUser={(u) => setUsers([...users, {...u, id: Date.now().toString(), createdAt: new Date().toISOString()}])} onImportUsers={(nu) => setUsers([...users, ...nu.map(u => ({...u, id: Math.random().toString(), createdAt: new Date().toISOString()}))])} onUpdateUser={(id, up) => setUsers(users.map(u => u.id === id ? {...u, ...up} : u))} onDeleteUser={(id) => setUsers(users.filter(u => u.id !== id))} lang={lang} />}
           {activeTab === 'pricing' && <PricingSettings rules={pricingRules} groups={accountGroups} apiConfig={apiConfig} ocppConfig={ocppConfig} ocpiConfig={ocpiConfig} onAddRule={(r) => setPricingRules([...pricingRules, {...r, id: Date.now().toString()}])} onUpdateRule={(id, up) => setPricingRules(pricingRules.map(r => r.id === id ? {...r, ...up} : r))} onDeleteRule={(id) => setPricingRules(pricingRules.filter(r => r.id !== id))} onAddGroup={(g) => setAccountGroups([...accountGroups, {...g, id: Date.now().toString()}])} onDeleteGroup={(id) => setAccountGroups(accountGroups.filter(g => g.id !== id))} onUpdateGroup={(id, up) => setAccountGroups(accountGroups.map(g => g.id === id ? {...g, ...up} : g))} onUpdateApiConfig={(up) => setApiConfig(prev => ({ ...prev, ...up }))} onUpdateOcppConfig={(up) => setOcppConfig(prev => ({ ...prev, ...up }))} onUpdateOcpiConfig={(up) => setOcpiConfig(prev => ({ ...prev, ...up }))} onExportBackup={() => databaseService.exportBackup({ transactions, pricingRules, accountGroups, expenses, apiConfig, ocppConfig, postgresConfig, ocpiConfig, authConfig, users, chargers, lastUpdated: new Date().toISOString() })} onImportBackup={(f) => {}} lang={lang} />}
           {activeTab === 'security' && <SecuritySettings authConfig={authConfig} postgresConfig={postgresConfig} onUpdateAuthConfig={(up) => setAuthConfig(prev => ({ ...prev, ...up }))} onUpdatePostgresConfig={(up) => setPostgresConfig(prev => ({ ...prev, ...up }))} lang={lang} role={currentUserRole} />}

@@ -22,11 +22,13 @@ const DEFAULT_DB: AppDatabase = {
   accountGroups: [],
   expenses: [],
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
-  // Fixed: Updated OcppConfig to match the interface definition in types.ts (removed chargePointId, added missing fields)
+  // Fixed: Updated OcppConfig to match the interface definition in types.ts
   ocppConfig: { 
-    centralSystemUrl: 'ws://voltflow.io/ocpp', 
+    domain: 'voltflow.io', 
     port: 3085, 
     path: '/ocpp', 
+    identity: 'VF-CORE-01',
+    referenceUrl: 'https://docs.voltflow.io/ocpp-specs',
     isListening: false, 
     heartbeatInterval: 60,
     securityProfile: 'PLAIN'

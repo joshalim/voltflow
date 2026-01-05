@@ -150,9 +150,11 @@ export interface ApiConfig {
 }
 
 export interface OcppConfig {
-  centralSystemUrl: string;
+  domain: string;
   port: number;
   path: string;
+  identity: string;
+  referenceUrl: string;
   isListening: boolean;
   heartbeatInterval: number;
   securityProfile: 'TLS' | 'PLAIN';

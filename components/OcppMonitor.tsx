@@ -54,10 +54,10 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <Server className="text-orange-500" />
+            <Activity className="text-orange-500" />
             {t('liveMonitor')}
           </h2>
-          <p className="text-slate-500 font-medium">Network Operations Center (NOC) • OCPP 1.6J Management</p>
+          <p className="text-slate-500 font-medium">Real-time socket telemetry and OCPP packet analysis.</p>
         </div>
         <div className="flex gap-2">
            {isAdmin && (
@@ -70,7 +70,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
               }`}
             >
               {ocppConfig.isListening ? <StopCircle size={20} /> : <Play size={20} />}
-              {ocppConfig.isListening ? 'STOP CMS LISTENER' : 'START CMS LISTENER'}
+              {ocppConfig.isListening ? 'STOP NOC' : 'START NOC'}
             </button>
            )}
         </div>
@@ -83,53 +83,44 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Network size={14} className="text-orange-500" />
-                Connection Center
+                Network Specs
               </h3>
               <div className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-widest uppercase ${
                 ocppConfig.isListening ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-500'
               }`}>
-                {ocppConfig.isListening ? 'Listening' : 'Standby'}
+                {ocppConfig.isListening ? 'LIVE' : 'IDLE'}
               </div>
             </div>
 
             <div className="space-y-4">
-              <NetworkField label="WSS Endpoint" value={`${ocppConfig.centralSystemUrl}`} icon={<Globe size={12}/>} />
+              <NetworkField label="Domain" value={ocppConfig.domain} icon={<Globe size={12}/>} />
               <div className="grid grid-cols-2 gap-3">
-                <NetworkField label="Port" value={`${ocppConfig.port || 3085}`} icon={<Network size={12}/>} />
+                <NetworkField label="Port" value={ocppConfig.port.toString()} icon={<Database size={12}/>} />
                 <NetworkField label="Protocol" value="1.6J" icon={<Info size={12}/>} />
               </div>
-              <NetworkField label="Auth" value={ocppConfig.securityProfile} icon={<ShieldCheck size={12}/>} />
+              <NetworkField label="Identity" value={ocppConfig.identity} icon={<ShieldCheck size={12}/>} />
             </div>
 
-            <div className="pt-4 border-t border-slate-800">
-              <div className="flex items-center justify-between text-[10px] font-bold">
-                <span className="text-slate-500">Active Sockets</span>
-                <span className="text-white">{activeConnections}</span>
-              </div>
-              <div className="flex items-center justify-between text-[10px] font-bold mt-2">
-                <span className="text-slate-500">Total Capacity</span>
-                <span className="text-white">{totalConnectors} Load Points</span>
-              </div>
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+               <span className="text-[10px] font-black text-slate-500 uppercase">Sockets</span>
+               <span className="text-orange-500 font-mono font-black">{activeConnections} / {chargers.length}</span>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                <Cpu size={14} className="text-blue-500" />
-               Hardware Inventory
+               Provisioned Hardware
              </h4>
              <div className="space-y-3">
                 {chargers.map(c => (
                   <div key={c.id} className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-slate-700">{c.name}</span>
-                    <span className={`px-1.5 py-0.5 rounded-md ${
+                    <span className="text-slate-700 truncate mr-2">{c.name}</span>
+                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${
                       c.status === 'ONLINE' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
                     }`}>{c.status}</span>
                   </div>
                 ))}
-                {chargers.length === 0 && (
-                  <p className="text-[10px] text-slate-400 italic">No registered hardware.</p>
-                )}
              </div>
           </div>
         </div>
@@ -138,7 +129,7 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
         <div className="lg:col-span-3 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {chargers.flatMap(charger => charger.connectors.map(connector => (
-              <div key={`${charger.id}-${connector.id}`} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 relative group transition-all hover:border-orange-200">
+              <div key={`${charger.id}-${connector.id}`} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 relative transition-all hover:border-orange-200">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-xl ${connector.status === 'CHARGING' ? 'bg-orange-50 text-orange-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
@@ -155,25 +146,10 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
                   </div>
                   <StatusBadge status={connector.status} />
                 </div>
-
-                <div className="flex-1 min-h-[40px] flex items-center">
-                  {connector.status === 'CHARGING' ? (
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      <LiveMetric label="Load" value={`${connector.currentPowerKW?.toFixed(1) || '0.0'} kW`} />
-                      <LiveMetric label="Session" value={`${connector.currentKWh?.toFixed(2) || '0.00'} kWh`} />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-300 italic">
-                      <Wifi size={10} />
-                      {connector.status === 'AVAILABLE' ? 'Waiting for Hardware Trigger...' : 'Disconnected'}
-                    </div>
-                  )}
-                </div>
-
                 <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
                    <div className="flex items-center gap-1">
                       <Clock size={10} />
-                      {charger.lastHeartbeat ? new Date(charger.lastHeartbeat).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Activity'}
+                      {charger.lastHeartbeat ? new Date(charger.lastHeartbeat).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
                    </div>
                    <span className="text-orange-500 font-bold">{connector.powerKW}kW Max</span>
                 </div>
@@ -181,44 +157,16 @@ const OcppMonitor: React.FC<OcppMonitorProps> = ({
             )))}
           </div>
 
-          {/* NOC Console */}
           <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-xl overflow-hidden flex flex-col h-[300px]">
             <div className="p-4 bg-slate-800/50 flex items-center justify-between border-b border-slate-700">
                <div className="flex items-center gap-2">
                  <Terminal size={14} className="text-emerald-400" />
-                 <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">NOC LIVE LOGS</span>
+                 <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">Live Trace</span>
                </div>
-               <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${ocppConfig.isListening ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
-                  <span className="text-[8px] font-mono text-slate-500">{ocppConfig.isListening ? 'LISTENING ON PORT ' + ocppConfig.port : 'OFFLINE'}</span>
-               </div>
+               <span className="text-[8px] font-mono text-slate-500 uppercase">Listening on port {ocppConfig.port}</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-3 custom-scrollbar">
-               {logs.length === 0 ? (
-                 <div className="h-full flex flex-col items-center justify-center text-slate-700 gap-2">
-                    <Activity size={24} className="opacity-20" />
-                    <p className="font-bold uppercase tracking-widest">Waiting for incoming OCPP 1.6 messages...</p>
-                 </div>
-               ) : (
-                 logs.map(log => (
-                   <div key={log.id} className="animate-in slide-in-from-left-2 duration-200">
-                     <div className="flex items-center gap-2 mb-1">
-                       <span className="text-slate-600">[{log.timestamp}]</span>
-                       <span className={`font-black ${log.direction === 'IN' ? 'text-blue-400' : 'text-emerald-400'}`}>
-                         {log.direction === 'IN' ? '◀' : '▶'}
-                       </span>
-                       <span className="text-white px-1 py-0.5 rounded-sm bg-slate-800 border border-slate-700 font-bold uppercase tracking-tighter">
-                         {log.messageType}
-                       </span>
-                       {log.chargerId && <span className="text-slate-500">[{log.chargerId}]</span>}
-                     </div>
-                     <pre className="bg-black/30 p-2 rounded-lg text-slate-400 border border-slate-800 overflow-x-auto whitespace-pre-wrap">
-                       {JSON.stringify(log.payload, null, 1)}
-                     </pre>
-                   </div>
-                 ))
-               )}
-               <div ref={logEndRef} />
+            <div className="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-3 custom-scrollbar text-slate-400 italic text-center py-20">
+               {logs.length === 0 ? "Waiting for incoming hardware packets..." : "Traces loading..."}
             </div>
           </div>
         </div>
@@ -253,12 +201,5 @@ const StatusBadge = ({ status }: { status: ConnectorStatus }) => {
     </span>
   );
 };
-
-const LiveMetric = ({ label, value }: any) => (
-  <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{label}</span>
-    <p className="text-[11px] font-black text-slate-800">{value}</p>
-  </div>
-);
 
 export default OcppMonitor;
