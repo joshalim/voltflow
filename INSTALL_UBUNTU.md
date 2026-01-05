@@ -44,14 +44,7 @@ pm2 startup
 
 ## 6. Accessing the UI
 1. Open `http://YOUR_SERVER_IP:3085`
-2. Go to **Security** tab.
-3. Configure PostgreSQL:
-   - **Host**: `localhost`
-   - **User**: `voltadmin`
-   - **Password**: `vlt_pass_2025`
-   - **Database**: `voltflow`
-4. Click **Verify Database Handshake**.
-5. Enable **Primary Storage** and click Save.
+
 
 ## 7. Security (Optional)
 Install Caddy for SSL:
