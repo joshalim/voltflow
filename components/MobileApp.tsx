@@ -4,7 +4,7 @@ import {
   Zap, MapPin, History, User as UserIcon, QrCode, 
   ArrowRight, Search, Battery, Clock, DollarSign, 
   ChevronRight, Navigation, ShieldCheck, Star,
-  Bell, Settings, LogOut, Info, Activity
+  Bell, Settings, LogOut, Info, Activity, Monitor
 } from 'lucide-react';
 import { EVCharger, EVTransaction, User, Language, ConnectorStatus } from '../types';
 import ConnectorIcon from './ConnectorIcon';
@@ -15,6 +15,7 @@ interface MobileAppProps {
   transactions: EVTransaction[];
   lang: Language;
   onLogout: () => void;
+  onExitPortal: () => void;
   onStartSession: (chargerId: string, connectorId: string) => void;
 }
 
@@ -24,20 +25,21 @@ const MobileApp: React.FC<MobileAppProps> = ({
   transactions, 
   lang, 
   onLogout,
+  onExitPortal,
   onStartSession
 }) => {
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'activity' | 'profile'>('home');
   const [isScanning, setIsScanning] = useState(false);
   
   const activeSession = useMemo(() => {
-    return transactions.find(tx => tx.account === user.id && tx.status === 'UNPAID');
-  }, [transactions, user.id]);
+    return transactions.find(tx => tx.account === (user.rfidTag || user.name) && tx.status === 'UNPAID');
+  }, [transactions, user.rfidTag, user.name]);
 
   const userTransactions = useMemo(() => {
-    return transactions.filter(tx => tx.account === user.id).sort((a, b) => 
+    return transactions.filter(tx => tx.account === (user.rfidTag || user.name)).sort((a, b) => 
       new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
     );
-  }, [transactions, user.id]);
+  }, [transactions, user.rfidTag, user.name]);
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden font-sans">
@@ -260,7 +262,7 @@ const MobileApp: React.FC<MobileAppProps> = ({
             <div className="space-y-3">
                <ProfileMenuItem icon={<UserIcon size={20} />} label="Personal Information" />
                <ProfileMenuItem icon={<DollarSign size={20} />} label="Payment Methods" badge="3 Cards" />
-               <ProfileMenuItem icon={<ShieldCheck size={20} />} label="Security & Privacy" />
+               <ProfileMenuItem icon={<Monitor size={20} />} label="Exit Driver Portal" onClick={onExitPortal} />
                <ProfileMenuItem icon={<Settings size={20} />} label="App Settings" />
                <ProfileMenuItem icon={<Info size={20} />} label="Help & Support" />
             </div>
@@ -348,8 +350,11 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
   </button>
 );
 
-const ProfileMenuItem = ({ icon, label, badge }: any) => (
-  <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between active:bg-slate-50 transition-colors">
+const ProfileMenuItem = ({ icon, label, badge, onClick }: any) => (
+  <div 
+    onClick={onClick}
+    className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between active:bg-slate-50 transition-colors cursor-pointer"
+  >
     <div className="flex items-center gap-4">
       <div className="text-slate-400">{icon}</div>
       <span className="font-bold text-slate-700 text-sm">{label}</span>

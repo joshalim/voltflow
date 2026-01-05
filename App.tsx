@@ -58,6 +58,44 @@ const App: React.FC = () => {
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
+  // Centralized Pricing Logic
+  const getAppliedRate = (account: string, connector: string): number => {
+    // 1. Check Exact Account + Connector Rule
+    const accountConnectorRule = pricingRules.find(r => 
+      r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === connector
+    );
+    if (accountConnectorRule) return accountConnectorRule.ratePerKWh;
+
+    // 2. Check Generic Account Rule
+    const accountGenericRule = pricingRules.find(r => 
+      r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === 'ALL'
+    );
+    if (accountGenericRule) return accountGenericRule.ratePerKWh;
+
+    // 3. Check Group Rules
+    const parentGroup = accountGroups.find(g => g.members.includes(account));
+    if (parentGroup) {
+      const groupConnectorRule = pricingRules.find(r => 
+        r.targetType === 'GROUP' && r.targetId === parentGroup.name && r.connector === connector
+      );
+      if (groupConnectorRule) return groupConnectorRule.ratePerKWh;
+
+      const groupGenericRule = pricingRules.find(r => 
+        r.targetType === 'GROUP' && r.targetId === parentGroup.name && r.connector === 'ALL'
+      );
+      if (groupGenericRule) return groupGenericRule.ratePerKWh;
+    }
+
+    // 4. Check Global Default
+    const defaultConnectorRule = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === connector);
+    if (defaultConnectorRule) return defaultConnectorRule.ratePerKWh;
+
+    const globalDefaultRule = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === 'ALL');
+    if (globalDefaultRule) return globalDefaultRule.ratePerKWh;
+
+    return 1500; // Fallback hardcoded
+  };
+
   // Initialize App Data
   useEffect(() => {
     const init = async () => {
@@ -98,18 +136,22 @@ const App: React.FC = () => {
     if (!currentUser) return;
     const charger = chargers.find(c => c.id === chargerId);
     if (!charger) return;
+    const connectorObj = charger.connectors.find(c => c.id === connectorId);
+    if (!connectorObj) return;
+
+    const rate = getAppliedRate(currentUser.rfidTag || currentUser.email, connectorObj.type);
     
     const newTx: EVTransaction = {
       id: `TX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
       station: charger.name,
-      connector: connectorId,
-      account: currentUser.id,
+      connector: connectorObj.type,
+      account: currentUser.rfidTag || currentUser.name,
       startTime: new Date().toISOString(),
       endTime: new Date().toISOString(),
       meterKWh: 0,
       costCOP: 0,
       durationMinutes: 0,
-      appliedRate: 1500,
+      appliedRate: rate,
       status: 'UNPAID',
       paymentType: 'N/A'
     };
@@ -167,7 +209,8 @@ const App: React.FC = () => {
         chargers={chargers} 
         transactions={transactions} 
         lang={lang} 
-        onLogout={() => setCurrentUserRole(null)}
+        onLogout={() => { setCurrentUserRole(null); setViewMode('DESKTOP'); }}
+        onExitPortal={() => setViewMode('DESKTOP')}
         onStartSession={handleStartSession}
       />
     );

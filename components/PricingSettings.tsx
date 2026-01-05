@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { PricingRule, AccountGroup, Language, ApiConfig, OcppConfig, OcpiConfig } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, Network, Activity, Download, Zap, DollarSign, Server, ShieldCheck, Link } from 'lucide-react';
+import { Plus, Trash2, Users, LayoutGrid, Target, Link2, Key, Globe, Network, Activity, Download, Zap, DollarSign, Server, ShieldCheck, Link, Layers } from 'lucide-react';
 
 interface PricingSettingsProps {
   rules: PricingRule[];
@@ -24,6 +24,8 @@ interface PricingSettingsProps {
   lang: Language;
 }
 
+const CONNECTOR_TYPES = ['CCS2', 'CHADEMO', 'TYPE 2', 'J1772', 'GBT', 'ALL'];
+
 const PricingSettings: React.FC<PricingSettingsProps> = ({ 
   rules, 
   groups, 
@@ -43,7 +45,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
   
   const [targetType, setTargetType] = useState<'ACCOUNT' | 'GROUP' | 'DEFAULT'>('ACCOUNT');
   const [targetId, setTargetId] = useState('');
-  const [connector, setConnector] = useState('');
+  const [connector, setConnector] = useState('ALL');
   const [rate, setRate] = useState('');
 
   const [groupName, setGroupName] = useState('');
@@ -61,7 +63,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
       ratePerKWh: parseFloat(rate)
     });
     setTargetId('');
-    setConnector('');
+    setConnector('ALL');
     setRate('');
   };
 
@@ -157,24 +159,30 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             <form onSubmit={handleAddRule} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 mb-8">
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Target Type</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Target Type</label>
                     <select className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" value={targetType} onChange={(e) => setTargetType(e.target.value as any)}>
-                      <option value="ACCOUNT">Individual</option>
-                      <option value="GROUP">Group</option>
-                      <option value="DEFAULT">Default</option>
+                      <option value="ACCOUNT">Individual Account</option>
+                      <option value="GROUP">Account Group</option>
+                      <option value="DEFAULT">Global Default</option>
                     </select>
                   </div>
                   {targetType !== 'DEFAULT' && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase">Identity</label>
-                      <input type="text" value={targetId} onChange={e => setTargetId(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" />
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity (RFID / Group Name)</label>
+                      <input type="text" value={targetId} onChange={e => setTargetId(e.target.value)} placeholder="e.g. A1B2C3D4" className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" />
                     </div>
                   )}
                </div>
-               <div className="grid grid-cols-2 gap-4">
+               <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase">Rate (COP/kWh)</label>
-                    <input type="number" value={rate} onChange={e => setRate(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" />
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1"><Layers size={10} /> Connector</label>
+                    <select className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" value={connector} onChange={(e) => setConnector(e.target.value)}>
+                      {CONNECTOR_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rate (COP/kWh)</label>
+                    <input type="number" value={rate} onChange={e => setRate(e.target.value)} placeholder="1500" className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none" />
                   </div>
                   <div className="space-y-1 flex items-end">
                     <button type="submit" className="w-full bg-orange-600 text-white py-2 rounded-xl text-xs font-black hover:bg-orange-700 transition shadow-lg shadow-orange-100">Add Rule</button>
@@ -188,13 +196,19 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><Zap size={14}/></div>
                     <div>
-                      <p className="text-xs font-black text-slate-800">{rule.targetId}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-black text-slate-800">{rule.targetId}</p>
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black rounded uppercase">{rule.connector}</span>
+                      </div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${rule.ratePerKWh}/kWh</p>
                     </div>
                   </div>
                   <button onClick={() => onDeleteRule(rule.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                 </div>
               ))}
+              {rules.length === 0 && (
+                <p className="text-center py-8 text-slate-300 italic text-sm">No billing rules defined. System will use fallback rate.</p>
+              )}
             </div>
           </div>
 
@@ -207,7 +221,7 @@ const PricingSettings: React.FC<PricingSettingsProps> = ({
             <form onSubmit={handleAddGroup} className="space-y-4">
                <ConfigField label="Group Name" value={groupName} onChange={setGroupName} placeholder="Logistics Fleet" />
                <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Member IDs</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Member IDs (RFID / Email)</label>
                  <textarea value={groupMembers} onChange={e => setGroupMembers(e.target.value)} placeholder="ID1, ID2, ID3..." className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 text-xs font-medium outline-none h-24" />
                </div>
                <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-2xl text-xs font-black hover:bg-blue-700 transition shadow-lg shadow-blue-100">Create Group</button>
