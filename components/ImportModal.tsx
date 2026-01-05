@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Upload, CheckCircle2, AlertTriangle, FileWarning } from 'lucide-react';
+import { X, Upload, CheckCircle2, AlertTriangle, FileWarning, Zap } from 'lucide-react';
 import { EVTransaction, PricingRule, AccountGroup, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -11,6 +11,7 @@ interface ImportModalProps {
   accountGroups: AccountGroup[];
   existingTxIds: Set<string>;
   lang: Language;
+  getAppliedRate: (account: string, connector: string) => number;
 }
 
 const REQUIRED_HEADERS = [
@@ -23,9 +24,7 @@ const REQUIRED_HEADERS = [
   'Meter value(kW.h)'
 ];
 
-const SPECIAL_ACCOUNTS = ['PORTERIA', 'Jorge Iluminacion', 'John Iluminacion'];
-
-const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRules, accountGroups, existingTxIds, lang }) => {
+const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRules, accountGroups, existingTxIds, lang, getAppliedRate }) => {
   const [dragActive, setDragActive] = useState(false);
   const [parsedData, setParsedData] = useState<EVTransaction[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -33,34 +32,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
   const [duplicateCount, setDuplicateCount] = useState(0);
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
-
-  const getAppliedRate = (account: string, connector: string): number => {
-    if (SPECIAL_ACCOUNTS.includes(account)) {
-      if (connector === 'CCS2') return 2500;
-      if (connector === 'CHADEMO') return 2000;
-      if (connector === 'J1772') return 1500;
-    }
-
-    const exactRule = pricingRules.find(r => 
-      r.targetType === 'ACCOUNT' && 
-      r.targetId === account && 
-      r.connector === connector
-    );
-    if (exactRule) return exactRule.ratePerKWh;
-
-    const parentGroup = accountGroups.find(g => g.members.includes(account));
-    if (parentGroup) {
-      const groupRule = pricingRules.find(r => 
-        r.targetType === 'GROUP' && 
-        r.targetId === parentGroup.id && 
-        r.connector === connector
-      );
-      if (groupRule) return groupRule.ratePerKWh;
-    }
-
-    const defaultRule = pricingRules.find(r => r.targetType === 'DEFAULT');
-    return defaultRule ? defaultRule.ratePerKWh : 1200;
-  };
 
   const calculateDuration = (start: string, end: string): number => {
     const s = new Date(start).getTime();
@@ -79,7 +50,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
     const batchTxIds = new Set<string>();
     
     if (missingHeaders.length > 0) {
-      return { data: [], errors: [`Missing: ${missingHeaders.join(', ')}`], duplicates: 0 };
+      return { data: [], errors: [`Missing headers: ${missingHeaders.join(', ')}`], duplicates: 0 };
     }
 
     const hMap: Record<string, number> = {};
@@ -89,28 +60,29 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       const lineNum = index + 2;
       if (row.length < REQUIRED_HEADERS.length) return;
 
-      const txId = row[hMap['TxID']].trim();
+      const txId = row[hMap['TxID']]?.trim();
+      if (!txId) return;
       
       if (existingTxIds.has(txId) || batchTxIds.has(txId)) {
         duplicates++;
         return;
       }
 
-      const station = row[hMap['Station']].trim();
-      const connector = row[hMap['Connector']].trim();
-      const account = row[hMap['Account']].trim();
-      const startTime = row[hMap['Start Time']].trim();
-      const endTime = row[hMap['End Time']].trim();
-      const meterKWhValue = row[hMap['Meter value(kW.h)']].trim();
+      const station = row[hMap['Station']]?.trim() || 'Unknown';
+      const connector = row[hMap['Connector']]?.trim() || 'N/A';
+      const account = row[hMap['Account']]?.trim() || 'Anonymous';
+      const startTime = row[hMap['Start Time']]?.trim();
+      const endTime = row[hMap['End Time']]?.trim();
+      const meterKWhValue = row[hMap['Meter value(kW.h)']]?.trim();
       const meterKWh = parseFloat(meterKWhValue);
 
-      if (isNaN(meterKWh) || meterKWh <= 0) return;
+      if (isNaN(meterKWh) || meterKWh < 0) return;
 
       const startDateObj = new Date(startTime);
       const endDateObj = new Date(endTime);
 
       if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-        errors.push(`Line ${lineNum}: Invalid Time.`);
+        errors.push(`Line ${lineNum}: Invalid Time format.`);
       }
 
       if (errors.length === 0) {
@@ -124,7 +96,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
           startTime: startDateObj.toISOString(),
           endTime: endDateObj.toISOString(),
           meterKWh,
-          costCOP: meterKWh * rate,
+          costCOP: Math.round(meterKWh * rate),
           durationMinutes: calculateDuration(startTime, endTime),
           appliedRate: rate,
           status: 'UNPAID',
@@ -147,7 +119,11 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
       try {
         const text = e.target?.result as string;
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-        if (lines.length < 2) return;
+        if (lines.length < 2) {
+          setValidationErrors(["CSV file is empty or missing data rows."]);
+          setIsProcessing(false);
+          return;
+        }
         const { data, errors, duplicates } = validateData(lines[0].split(','), lines.slice(1).map(l => l.split(',')));
         if (errors.length > 0) setValidationErrors(errors);
         else {
@@ -155,7 +131,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
           setDuplicateCount(duplicates);
         }
       } catch (err) {
-        setValidationErrors(["Failed to read file. Please ensure it is a valid CSV."]);
+        setValidationErrors(["Failed to read file. Please ensure it is a valid CSV format."]);
       } finally {
         setIsProcessing(false);
       }
@@ -167,69 +143,101 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImport, pricingRul
   const onDrop = (e: React.DragEvent) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-orange-900/20 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-xl font-black text-slate-800">{t('importTransactions')}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div>
+            <h3 className="text-xl font-black text-slate-800">{t('importTransactions')}</h3>
+            <p className="text-xs text-slate-400 font-medium">Bulk processing for Ocpp exports</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-50 transition">
+            <X size={24} />
+          </button>
         </div>
-        <div className="p-6">
-          {!parsedData.length && duplicateCount === 0 && !isProcessing ? (
-            <div onDragEnter={onDrag} onDragLeave={onDrag} onDragOver={onDrag} onDrop={onDrop}
-              className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center transition-all ${dragActive ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300'}`}>
-              <div className="bg-orange-100 p-4 rounded-full mb-4">
-                <Upload size={32} className="text-orange-600" />
+        
+        <div className="p-8">
+          {!parsedData.length && duplicateCount === 0 && !isProcessing && validationErrors.length === 0 ? (
+            <div 
+              onDragEnter={onDrag} onDragLeave={onDrag} onDragOver={onDrag} onDrop={onDrop}
+              className={`border-3 border-dashed rounded-[2rem] p-12 flex flex-col items-center transition-all ${dragActive ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-orange-300'}`}
+            >
+              <div className="bg-orange-100 p-5 rounded-full mb-6">
+                <Upload size={40} className="text-orange-600" />
               </div>
-              <p className="font-black text-slate-800">{t('dropCsv')}</p>
-              <p className="text-xs text-slate-400 mt-1 mb-6">File must contain TxID, Station, Connector, Account, etc.</p>
-              <label className="bg-orange-600 text-white px-8 py-3 rounded-xl cursor-pointer font-bold shadow-lg shadow-orange-100 hover:bg-orange-700 transition">
-                {t('browseFiles')} <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+              <p className="font-black text-lg text-slate-800 text-center">{t('dropCsv')}</p>
+              <p className="text-xs text-slate-400 mt-2 mb-8 text-center max-w-[200px]">Ensure headers match standard Ocpp CSV exports.</p>
+              
+              <label className="bg-orange-600 text-white px-8 py-3.5 rounded-2xl cursor-pointer font-black shadow-lg shadow-orange-100 hover:bg-orange-700 active:scale-95 transition-all">
+                {t('browseFiles')}
+                <input type="file" className="hidden" accept=".csv" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
               </label>
             </div>
           ) : isProcessing ? (
             <div className="py-20 flex flex-col items-center justify-center">
-              <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mb-4"></div>
-              <p className="font-bold text-slate-600">{t('validatingEntries')}</p>
+              <div className="w-12 h-12 border-4 border-orange-100 border-t-orange-600 rounded-full animate-spin mb-6"></div>
+              <p className="font-black text-slate-600 uppercase tracking-widest text-[10px]">{t('validatingEntries')}</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {validationErrors.length > 0 && (
+                <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-600 font-black text-xs uppercase">
+                    <AlertTriangle size={16} /> Validation Failed
+                  </div>
+                  <ul className="text-xs text-rose-500 list-disc list-inside font-medium">
+                    {validationErrors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                  <button onClick={() => setValidationErrors([])} className="text-[10px] font-black text-rose-600 uppercase hover:underline mt-2">Try Again</button>
+                </div>
+              )}
+
               {parsedData.length > 0 && (
-                <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 flex items-center gap-4 animate-in slide-in-from-bottom-2">
-                  <div className="bg-emerald-500 p-2 rounded-lg"><CheckCircle2 className="text-white" size={20} /></div>
+                <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 flex items-center gap-5 animate-in slide-in-from-bottom-2">
+                  <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-100"><CheckCircle2 className="text-white" size={24} /></div>
                   <div>
-                    <p className="text-emerald-900 font-black leading-tight">{parsedData.length} {t('newTransactions')}</p>
-                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-0.5">Ready for billing update</p>
+                    <p className="text-emerald-900 font-black text-lg leading-tight">{parsedData.length} {t('newTransactions')}</p>
+                    <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">Validated & Price Matched</p>
                   </div>
                 </div>
               )}
 
               {duplicateCount > 0 && (
-                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 flex items-center gap-4 animate-in slide-in-from-bottom-2">
-                  <div className="bg-amber-500 p-2 rounded-lg"><FileWarning className="text-white" size={20} /></div>
+                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex items-center gap-5 animate-in slide-in-from-bottom-2">
+                  <div className="bg-slate-400 p-3 rounded-2xl shadow-lg shadow-slate-100"><FileWarning className="text-white" size={24} /></div>
                   <div>
-                    <p className="text-amber-900 font-black leading-tight">{duplicateCount} {t('duplicatesSkipped')}</p>
-                    <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mt-0.5">TxIDs already exist in system</p>
+                    <p className="text-slate-900 font-black text-lg leading-tight">{duplicateCount} {t('duplicatesSkipped')}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Existing TxIDs ignored</p>
                   </div>
-                </div>
-              )}
-
-              {parsedData.length === 0 && duplicateCount > 0 && (
-                <div className="p-6 text-center">
-                  <p className="text-slate-500 font-medium">No new transactions found.</p>
-                  <button onClick={() => {setDuplicateCount(0); setParsedData([]);}} className="mt-4 text-orange-600 font-bold hover:underline">Try another file</button>
                 </div>
               )}
 
               {parsedData.length > 0 && (
-                <>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('howPricingCalculated')}</h4>
-                    <p className="text-xs text-slate-600">Calculated rates based on <span className="font-bold text-orange-600">Account Groups</span> and <span className="font-bold text-orange-600">Individual Overrides</span>.</p>
+                <div className="space-y-4">
+                  <div className="p-5 bg-orange-50 rounded-2xl border border-orange-100">
+                    <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <Zap size={10} /> Dynamic Billing Engine
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      Costs have been pre-calculated using the <span className="text-orange-600 font-black">Account Group Hierarchy</span>. Total batch value: <span className="font-black text-slate-800">${new Intl.NumberFormat().format(parsedData.reduce((s,t) => s + t.costCOP, 0))} COP</span>.
+                    </p>
                   </div>
-                  <button onClick={() => onImport(parsedData)} className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-orange-200 hover:bg-orange-700 active:scale-[0.98] transition">
+                  <button 
+                    onClick={() => onImport(parsedData)} 
+                    className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black shadow-xl hover:bg-slate-900 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Upload size={20} />
                     {t('finalizeImport')}
                   </button>
-                </>
+                </div>
+              )}
+
+              {parsedData.length === 0 && (duplicateCount > 0 || validationErrors.length > 0) && (
+                <button 
+                  onClick={() => { setDuplicateCount(0); setParsedData([]); setValidationErrors([]); }}
+                  className="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                >
+                  Restart Process
+                </button>
               )}
             </div>
           )}

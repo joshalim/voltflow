@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages, Network, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Table as TableIcon, Zap, BrainCircuit, PlusCircle, Globe, Settings, BarChart3, Filter, Calendar, MapPin, User as UserIcon, X, ReceiptText, Layers, Save, CheckCircle2, Activity, Users, Settings2, Server, ShieldCheck, LogOut, Database, Languages, Network, Smartphone, Upload } from 'lucide-react';
 import { TRANSLATIONS } from './constants';
 import { EVTransaction, Language, PricingRule, AccountGroup, Expense, ApiConfig, OcppConfig, User, EVCharger, AuthConfig, UserRole, OcpiConfig, PostgresConfig } from './types';
 import Dashboard from './components/Dashboard';
@@ -48,8 +48,9 @@ const App: React.FC = () => {
   const [infraSubTab, setInfraSubTab] = useState<'live' | 'hardware'>('live');
   const [lang, setLang] = useState<Language>('en');
   const [isSaving, setIsSaving] = useState(false);
-  const [isPgConnected, setIsPgConnected] = useState<boolean | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  // Added missing state variables for transaction filtering
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedStation, setSelectedStation] = useState('all');
@@ -58,42 +59,34 @@ const App: React.FC = () => {
 
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
 
-  // Centralized Pricing Logic
-  const getAppliedRate = (account: string, connector: string): number => {
-    // 1. Check Exact Account + Connector Rule
-    const accountConnectorRule = pricingRules.find(r => 
-      r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === connector
-    );
-    if (accountConnectorRule) return accountConnectorRule.ratePerKWh;
+  // Centralized Pricing Logic - Robust implementation
+  const getAppliedRate = (account: string, connectorType: string): number => {
+    // Priority 1: Exact Account + Specific Connector
+    const accConn = pricingRules.find(r => r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === connectorType);
+    if (accConn) return accConn.ratePerKWh;
 
-    // 2. Check Generic Account Rule
-    const accountGenericRule = pricingRules.find(r => 
-      r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === 'ALL'
-    );
-    if (accountGenericRule) return accountGenericRule.ratePerKWh;
+    // Priority 2: Account Global (ALL connectors)
+    const accAll = pricingRules.find(r => r.targetType === 'ACCOUNT' && r.targetId === account && r.connector === 'ALL');
+    if (accAll) return accAll.ratePerKWh;
 
-    // 3. Check Group Rules
-    const parentGroup = accountGroups.find(g => g.members.includes(account));
-    if (parentGroup) {
-      const groupConnectorRule = pricingRules.find(r => 
-        r.targetType === 'GROUP' && r.targetId === parentGroup.name && r.connector === connector
-      );
-      if (groupConnectorRule) return groupConnectorRule.ratePerKWh;
+    // Priority 3: Group Rules
+    const group = accountGroups.find(g => g.members.includes(account));
+    if (group) {
+      const groupConn = pricingRules.find(r => r.targetType === 'GROUP' && r.targetId === group.name && r.connector === connectorType);
+      if (groupConn) return groupConn.ratePerKWh;
 
-      const groupGenericRule = pricingRules.find(r => 
-        r.targetType === 'GROUP' && r.targetId === parentGroup.name && r.connector === 'ALL'
-      );
-      if (groupGenericRule) return groupGenericRule.ratePerKWh;
+      const groupAll = pricingRules.find(r => r.targetType === 'GROUP' && r.targetId === group.name && r.connector === 'ALL');
+      if (groupAll) return groupAll.ratePerKWh;
     }
 
-    // 4. Check Global Default
-    const defaultConnectorRule = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === connector);
-    if (defaultConnectorRule) return defaultConnectorRule.ratePerKWh;
+    // Priority 4: System Defaults
+    const defConn = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === connectorType);
+    if (defConn) return defConn.ratePerKWh;
 
-    const globalDefaultRule = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === 'ALL');
-    if (globalDefaultRule) return globalDefaultRule.ratePerKWh;
+    const defGlobal = pricingRules.find(r => r.targetType === 'DEFAULT' && r.connector === 'ALL');
+    if (defGlobal) return defGlobal.ratePerKWh;
 
-    return 1500; // Fallback hardcoded
+    return 1500; // Final hard fallback
   };
 
   // Initialize App Data
@@ -192,7 +185,6 @@ const App: React.FC = () => {
           setCurrentUserRole(role);
           if (user) setCurrentUser(user);
           else {
-            // Mock admin as a user if needed for testing
             setCurrentUser({ id: 'ADMIN-01', name: 'System Admin', email: 'admin@voltflow.io', phone: '000', userType: 'PERSONAL', rfidTag: 'ADMIN', status: 'ACTIVE', createdAt: '' });
           }
         }} 
@@ -201,7 +193,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Handle Mobile View Override
   if (viewMode === 'MOBILE' && currentUser) {
     return (
       <MobileApp 
@@ -285,7 +276,19 @@ const App: React.FC = () => {
       <main className="flex-1 md:ml-64 p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8">
           {activeTab === 'dashboard' && <Dashboard transactions={filteredTransactions} expenses={expenses} chargers={chargers} lang={lang} />}
-          {activeTab === 'transactions' && <TransactionTable transactions={filteredTransactions} lang={lang} role={currentUserRole} onClear={() => setTransactions([])} onUpdate={(id, up) => setTransactions(transactions.map(t => t.id === id ? {...t, ...up} : t))} onDelete={(id) => setTransactions(transactions.filter(t => t.id !== id))} onBulkUpdate={(ids, up) => setTransactions(transactions.map(t => ids.includes(t.id) ? {...t, ...up} : t))} onBulkDelete={(ids) => setTransactions(transactions.filter(t => !ids.includes(t.id)))} />}
+          {activeTab === 'transactions' && (
+            <TransactionTable 
+              transactions={filteredTransactions} 
+              lang={lang} 
+              role={currentUserRole} 
+              onClear={() => setTransactions([])} 
+              onUpdate={(id, up) => setTransactions(transactions.map(t => t.id === id ? {...t, ...up} : t))} 
+              onDelete={(id) => setTransactions(transactions.filter(t => t.id !== id))} 
+              onBulkUpdate={(ids, up) => setTransactions(transactions.map(t => ids.includes(t.id) ? {...t, ...up} : t))} 
+              onBulkDelete={(ids) => setTransactions(transactions.filter(t => !ids.includes(t.id)))}
+              onOpenImport={() => setIsImportModalOpen(true)}
+            />
+          )}
           
           {activeTab === 'network' && (
             <div className="space-y-6">
@@ -334,6 +337,21 @@ const App: React.FC = () => {
           {activeTab === 'security' && <SecuritySettings authConfig={authConfig} postgresConfig={postgresConfig} onUpdateAuthConfig={(up) => setAuthConfig(prev => ({ ...prev, ...up }))} onUpdatePostgresConfig={(up) => setPostgresConfig(prev => ({ ...prev, ...up }))} lang={lang} role={currentUserRole} />}
         </div>
       </main>
+
+      {isImportModalOpen && (
+        <ImportModal 
+          lang={lang}
+          pricingRules={pricingRules}
+          accountGroups={accountGroups}
+          existingTxIds={new Set(transactions.map(t => t.id))}
+          onClose={() => setIsImportModalOpen(false)}
+          onImport={(newTxs) => {
+            setTransactions(prev => [...newTxs, ...prev]);
+            setIsImportModalOpen(false);
+          }}
+          getAppliedRate={getAppliedRate}
+        />
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { EVTransaction, Language, TransactionStatus, PaymentMethod, UserRole } from '../types';
-import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, CheckSquare, Square, Layers, X, FileText } from 'lucide-react';
+import { Search, Edit3, Trash2, CheckCircle, XCircle, CreditCard, Banknote, Wallet, Clock, CheckSquare, Square, Layers, X, FileText, Upload } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import ConnectorIcon from './ConnectorIcon';
 import InvoiceModal from './InvoiceModal';
@@ -13,6 +13,7 @@ interface TransactionTableProps {
   onDelete: (id: string) => void;
   onBulkUpdate: (ids: string[], updates: Partial<EVTransaction>) => void;
   onBulkDelete: (ids: string[]) => void;
+  onOpenImport: () => void;
   lang: Language;
   role: UserRole;
 }
@@ -27,6 +28,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   onDelete, 
   onBulkUpdate, 
   onBulkDelete, 
+  onOpenImport,
   lang,
   role
 }) => {
@@ -115,7 +117,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           <h2 className="text-2xl font-black text-slate-800">{t('transactions')}</h2>
           <p className="text-xs text-slate-400 font-medium">Manage and filter charging records by account or status.</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
@@ -127,9 +129,18 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             />
           </div>
           {isAdmin && (
-            <button onClick={onClear} className="px-4 py-2 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
-              {t('clear')}
-            </button>
+            <>
+              <button 
+                onClick={onOpenImport} 
+                className="px-4 py-2 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 transition-colors flex items-center gap-2 shadow-lg shadow-orange-100"
+              >
+                <Upload size={16} />
+                {t('importCsv')}
+              </button>
+              <button onClick={onClear} className="px-4 py-2 text-red-600 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
+                {t('clear')}
+              </button>
+            </>
           )}
         </div>
       </div>
