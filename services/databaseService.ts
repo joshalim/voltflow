@@ -22,7 +22,6 @@ const DEFAULT_DB: AppDatabase = {
   accountGroups: [],
   expenses: [],
   apiConfig: { invoiceApiUrl: '', invoiceApiKey: '', isEnabled: false },
-  // Fixed: Updated OcppConfig to match the interface definition in types.ts
   ocppConfig: { 
     domain: 'voltflow.io', 
     port: 3085, 
@@ -58,45 +57,48 @@ const DEFAULT_DB: AppDatabase = {
 export const databaseService = {
   async save(data: Partial<AppDatabase>) {
     try {
-      // We still sync to localstorage as a robust cache
+      // Sync to localstorage as a secondary failover cache for the current device
       localStorage.setItem('voltflow_cache', JSON.stringify(data));
 
-      if (data.postgresConfig?.isEnabled) {
-        const response = await fetch('/api/db/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        return response.ok;
-      }
-      return true;
+      // Attempt to save to server (which persists to PostgreSQL)
+      const response = await fetch('/api/db/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      return response.ok;
     } catch (error) {
-      console.error('Failed to save to Postgres:', error);
+      console.warn('Postgres save failed, data is only in local cache:', error);
       return false;
     }
   },
 
   async load(): Promise<AppDatabase> {
     try {
-      // First try to load from backend
+      // First try to load from the server's PostgreSQL connection
       const response = await fetch('/api/db/load');
       if (response.ok) {
         const remoteData = await response.json();
+        // If server has data, it is the absolute source of truth
         if (remoteData) return { ...DEFAULT_DB, ...remoteData };
       }
 
-      // Fallback to cache
+      // Fallback to local device cache only if server is unavailable or empty
       const cached = localStorage.getItem('voltflow_cache');
       if (cached) return { ...DEFAULT_DB, ...JSON.parse(cached) };
 
       return DEFAULT_DB;
     } catch (error) {
-      console.error('Failed to load data:', error);
-      return DEFAULT_DB;
+      console.error('Failed to load data from server:', error);
+      // Last resort fallback
+      const cached = localStorage.getItem('voltflow_cache');
+      return cached ? JSON.parse(cached) : DEFAULT_DB;
     }
   },
 
   async testPostgres(config: PostgresConfig) {
+    // This endpoint now also PERSISTS the config on the server if successful
     const response = await fetch('/api/db/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -110,7 +112,7 @@ export const databaseService = {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `voltflow_postgres_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `voltflow_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }

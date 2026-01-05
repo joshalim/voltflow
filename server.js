@@ -3,11 +3,13 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import fs from 'fs';
 import pkg from 'pg';
 const { Pool } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const CONFIG_PATH = path.join(__dirname, 'db_config.json');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -17,27 +19,55 @@ const HOST = '0.0.0.0';
 
 let pgPool = null;
 
-// Initialize Postgres Schema
-const initDbSchema = async (pool) => {
-  const client = await pool.connect();
+// Persistent Config Management
+const saveDbConfig = (config) => {
   try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS app_data (
-        id SERIAL PRIMARY KEY,
-        key TEXT UNIQUE,
-        data JSONB,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('Postgres schema verified.');
-  } finally {
-    client.release();
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+    console.log('Database configuration saved to disk.');
+  } catch (err) {
+    console.error('Error saving database config:', err);
   }
 };
 
-// Handle Postgres Config Updates
+const loadDbConfig = () => {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      const data = fs.readFileSync(CONFIG_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading database config from disk:', err);
+  }
+  return null;
+};
+
+// Initialize Postgres Schema
+const initDbSchema = async (pool) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS app_data (
+          id SERIAL PRIMARY KEY,
+          key TEXT UNIQUE,
+          data JSONB,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('Postgres schema verified.');
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Failed to initialize schema:', err.message);
+  }
+};
+
+// Handle Postgres Pool Lifecycle
 const setupPgPool = (config) => {
-  if (pgPool) pgPool.end();
+  if (pgPool) {
+    pgPool.end();
+  }
   
   pgPool = new Pool({
     host: config.host,
@@ -49,10 +79,23 @@ const setupPgPool = (config) => {
     connectionTimeoutMillis: 5000,
   });
 
+  pgPool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    pgPool = null; // Reset pool on critical error
+  });
+
+  initDbSchema(pgPool);
   return pgPool;
 };
 
-// API: Test Postgres Connection
+// Auto-boot sequence
+const savedConfig = loadDbConfig();
+if (savedConfig && savedConfig.isEnabled) {
+  console.log('Initializing database from saved configuration...');
+  setupPgPool(savedConfig);
+}
+
+// API: Test & Persist Postgres Connection
 app.post('/api/db/test', async (req, res) => {
   const config = req.body;
   const testPool = new Pool({
@@ -70,15 +113,22 @@ app.post('/api/db/test', async (req, res) => {
     await client.query('SELECT NOW()');
     client.release();
     await testPool.end();
-    res.json({ success: true, message: 'Connection Successful' });
+
+    // If test is successful, persist this config and update live pool
+    saveDbConfig(config);
+    setupPgPool(config);
+
+    res.json({ success: true, message: 'Connection Successful and Persisted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// API: Load Data
+// API: Load Data (Multi-device safe)
 app.get('/api/db/load', async (req, res) => {
-  if (!pgPool) return res.status(400).json({ error: 'Postgres not configured' });
+  if (!pgPool) {
+    return res.status(200).json(null); // Return null so app initializes with defaults
+  }
   try {
     const result = await pgPool.query("SELECT data FROM app_data WHERE key = 'voltflow_global_state'");
     if (result.rows.length > 0) {
@@ -94,9 +144,7 @@ app.get('/api/db/load', async (req, res) => {
 // API: Save Data
 app.post('/api/db/save', async (req, res) => {
   if (!pgPool) {
-    // Attempt auto-setup if we have config in the request
-    if (req.body.postgresConfig) setupPgPool(req.body.postgresConfig);
-    else return res.status(400).json({ error: 'Postgres not configured' });
+    return res.status(400).json({ error: 'Database not connected on server. Go to Security tab to configure.' });
   }
   
   try {
@@ -114,20 +162,18 @@ app.post('/api/db/save', async (req, res) => {
 
 // Mock Status for NOC / Monitoring
 app.get('/api/ocpp/status', (req, res) => {
-  res.json({ status: 'LISTENING', port: PORT, protocol: 'ocpp1.6j' });
+  res.json({ 
+    status: 'LISTENING', 
+    port: PORT, 
+    protocol: 'ocpp1.6j',
+    dbConnected: !!pgPool
+  });
 });
 
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
 const server = http.createServer(app);
-
-// Simple log for debugging
-server.on('upgrade', (request, socket, head) => {
-  console.log('Incoming WebSocket Upgrade request for OCPP...');
-  // In a real scenario, we would use 'ws' library here to handle the upgrade.
-  // For now, we just acknowledge the attempt in logs.
-});
 
 server.listen(PORT, HOST, () => {
   console.log(`VoltFlow CMS @ http://${HOST}:${PORT}`);
